@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI Basketball Shot Angle Detector</title>
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Inter font -->
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body
+    class="min-h-screen bg-gradient-to-br from-gray-900 to-gray-700 text-white p-4 flex flex-col items-center justify-center"
+  >
+    <div
+      class="max-w-4xl w-full bg-gray-800 rounded-lg shadow-2xl p-6 space-y-6"
+    >
+      <h1 class="text-4xl font-extrabold text-center text-blue-400 mb-6">
+        Basketball Shot Angle Detector
+      </h1>
+
+      <!-- Instructions Section -->
+      <div class="bg-gray-700 p-4 rounded-md shadow-inner">
+        <button
+          id="toggle-instructions"
+          class="w-full flex justify-between items-center text-lg font-semibold text-blue-300 hover:text-blue-200 focus:outline-none"
+        >
+          <span class="flex items-center">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              class="lucide lucide-info mr-2"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 16v-4" />
+              <path d="M12 8h.01" />
+            </svg>
+            How to Use
+          </span>
+          <svg
+            id="chevron-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-chevron-down"
+          >
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </button>
+        <div
+          id="instructions-content"
+          class="mt-4 text-gray-300 text-sm space-y-2"
+        >
+          <p>1. Click "Upload Video" to select a basketball shot video.</p>
+          <p>
+            2. The video will appear below. Click the Play/Pause button to
+            control playback.
+          </p>
+          <p>
+            3. As the video plays, the app will attempt to detect your arm and
+            display the angle between your upper arm and forearm in real-time.
+          </p>
+          <p>
+            4. When you see the moment of ball release, click "Log Current
+            Angle" to record that specific angle and timestamp.
+          </p>
+          <p class="font-bold text-yellow-300">
+            Note: Generating a new video file with overlaid annotations is a
+            complex task for web browsers and is not supported in this
+            client-side demo. The annotations are shown live on the video.
+          </p>
+        </div>
+      </div>
+
+      <!-- Video Upload and Controls -->
+      <div class="flex flex-col md:flex-row items-center justify-center gap-4">
+        <label
+          for="video-upload"
+          class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-upload-cloud mr-2"
+          >
+            <path
+              d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"
+            />
+            <path d="M12 12v9" />
+            <path d="m16 16-4-4-4 4" />
+          </svg>
+          Upload Video
+        </label>
+        <input id="video-upload" type="file" accept="video/*" class="hidden" />
+
+        <button
+          id="play-pause-btn"
+          class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
+          style="display: none"
+        >
+          <svg
+            id="play-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-play mr-2"
+          >
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+          <svg
+            id="pause-icon"
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-pause mr-2"
+            style="display: none"
+          >
+            <rect x="6" y="4" width="4" height="16" />
+            <rect x="14" y="4" width="4" height="16" />
+          </svg>
+          <span id="play-pause-text">Play</span>
+        </button>
+        <button
+          id="log-angle-btn"
+          class="bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
+          style="display: none"
+        >
+          Log Current Angle
+        </button>
+        <button
+          id="reset-btn"
+          class="bg-red-600 hover:bg-red-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
+          style="display: none"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-rotate-ccw mr-2"
+          >
+            <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.76 2.75L3 8" />
+            <path d="M3 3v5h5" />
+          </svg>
+          Reset
+        </button>
+      </div>
+
+      <!-- Video and Canvas Display Area -->
+      <div
+        class="video-container rounded-lg shadow-xl border-2 border-blue-500"
+      >
+        <div id="loading-spinner" class="loading-overlay hidden">
+          <div
+            class="spinner rounded-full h-16 w-16 border-t-4 border-b-4"
+          ></div>
+          <p class="ml-4 text-xl text-blue-300">
+            Loading video and pose model...
+          </p>
+        </div>
+        <video id="video-player" playsinline muted></video>
+        <canvas id="video-canvas"></canvas>
+      </div>
+
+      <!-- Angle Display and Log -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-gray-700 p-4 rounded-md shadow-inner">
+          <h2 class="text-2xl font-semibold text-blue-300 mb-3">Live Angle</h2>
+          <p
+            id="current-angle-display"
+            class="text-5xl font-bold text-center text-yellow-400"
+          >
+            N/A
+          </p>
+        </div>
+
+        <div
+          class="bg-gray-700 p-4 rounded-md shadow-inner max-h-64 overflow-y-auto"
+        >
+          <h2 class="text-2xl font-semibold text-blue-300 mb-3">
+            Logged Angles
+          </h2>
+          <ul id="angles-log-list" class="space-y-2">
+            <p id="no-angles-message" class="text-gray-400">
+              No angles logged yet.
+            </p>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Download Button (with disclaimer) -->
+      <div class="text-center mt-6">
+        <button
+          id="download-btn"
+          class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center justify-center mx-auto"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-download mr-2"
+          >
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="7 10 12 15 17 10" />
+            <line x1="12" x2="12" y1="15" y2="3" />
+          </svg>
+          Download Annotated Video (Info)
+        </button>
+      </div>
+    </div>
+
+    <!-- MediaPipe Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+
+    <script>
+      console.log('POSE', Pose);
+      // DOM Elements
+      const videoUploadInput = document.getElementById('video-upload');
+      const videoPlayer = document.getElementById('video-player');
+      const videoCanvas = document.getElementById('video-canvas');
+      const currentAngleDisplay = document.getElementById(
+        'current-angle-display'
+      );
+      const anglesLogList = document.getElementById('angles-log-list');
+      const noAnglesMessage = document.getElementById('no-angles-message');
+      const playPauseBtn = document.getElementById('play-pause-btn');
+      const playIcon = document.getElementById('play-icon');
+      const pauseIcon = document.getElementById('pause-icon');
+      const playPauseText = document.getElementById('play-pause-text');
+      const logAngleBtn = document.getElementById('log-angle-btn');
+      const resetBtn = document.getElementById('reset-btn');
+      const downloadBtn = document.getElementById('download-btn');
+      const loadingSpinner = document.getElementById('loading-spinner');
+      const toggleInstructionsBtn = document.getElementById(
+        'toggle-instructions'
+      );
+      const instructionsContent = document.getElementById(
+        'instructions-content'
+      );
+      const chevronIcon = document.getElementById('chevron-icon');
+
+      const ctx = videoCanvas.getContext('2d');
+
+      let pose; // MediaPipe Pose instance
+      let animationFrameId = null; // To store animation frame ID for cleanup
+      let currentAngle = null; // Current detected angle
+      let anglesLog = []; // Log of angles recorded by the user
+      let isPaused = true; // Video playback state
+
+      // --- Utility Functions ---
+
+      /**
+       * Calculates the angle between three points (A, B, C) at point B.
+       * Points are objects with x and y properties (e.g., {x: 100, y: 50}).
+       * @param {Object} A - First point (e.g., shoulder)
+       * @param {Object} B - Middle point (e.g., elbow)
+       * @param {Object} C - Third point (e.g., wrist)
+       * @returns {number} Angle in degrees.
+       */
+      function calculateAngle(A, B, C) {
+        // Vectors BA and BC
+        const BAx = A.x - B.x;
+        const BAy = A.y - B.y;
+        const BCx = C.x - B.x;
+        const BCy = C.y - B.y;
+
+        // Dot product of BA and BC
+        const dotProduct = BAx * BCx + BAy * BCy;
+
+        // Magnitudes of BA and BC
+        const magnitudeBA = Math.sqrt(BAx * BAx + BAy * BAy);
+        const magnitudeBC = Math.sqrt(BCx * BCx + BCy * BCy);
+
+        // Cosine of the angle
+        let cosAngle = dotProduct / (magnitudeBA * magnitudeBC);
+
+        // Clamp cosAngle to prevent NaN from floating point inaccuracies or values outside [-1, 1]
+        cosAngle = Math.max(-1, Math.min(1, cosAngle));
+
+        // Angle in radians, then convert to degrees
+        const angleRad = Math.acos(cosAngle);
+        const angleDeg = angleRad * (180 / Math.PI);
+
+        return angleDeg;
+      }
+
+      /**
+       * Updates the angles log display in the UI.
+       */
+      function updateAnglesLogDisplay() {
+        anglesLogList.innerHTML = ''; // Clear existing list
+        if (anglesLog.length === 0) {
+          noAnglesMessage.style.display = 'block';
+        } else {
+          noAnglesMessage.style.display = 'none';
+          anglesLog.forEach((entry, index) => {
+            const listItem = document.createElement('li');
+            listItem.className =
+              'flex justify-between items-center text-gray-300 bg-gray-600 p-2 rounded-md';
+            listItem.innerHTML = `
+                        <span>Angle: <span class="font-bold text-yellow-300">${entry.angle}°</span></span>
+                        <span>Time: <span class="font-bold text-yellow-300">${entry.timestamp}s</span></span>
+                    `;
+            anglesLogList.appendChild(listItem);
+          });
+        }
+      }
+
+      /**
+       * Hides or shows control buttons based on video presence.
+       * @param {boolean} show - True to show, false to hide.
+       */
+      function toggleControlsVisibility(show) {
+        playPauseBtn.style.display = show ? 'flex' : 'none';
+        logAngleBtn.style.display = show ? 'flex' : 'none';
+        resetBtn.style.display = show ? 'flex' : 'none';
+      }
+
+      // --- MediaPipe Processing ---
+
+      /**
+       * Callback function when MediaPipe Pose results are available.
+       * @param {Object} results - The pose detection results.
+       */
+      function onResults(results) {
+        // Clear the canvas and redraw the video frame to ensure it's always visible
+        ctx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
+        ctx.drawImage(videoPlayer, 0, 0, videoCanvas.width, videoCanvas.height);
+
+        if (results.poseLandmarks) {
+          // Draw the pose landmarks and connections on the canvas
+          // Green color for connections, Red for landmarks
+          // MediaPipe's drawing_utils are available globally after CDN import
+          if (window.drawConnectors && window.drawLandmarks && window.Pose) {
+            window.drawConnectors(
+              ctx,
+              results.poseLandmarks,
+              window.Pose.POSE_CONNECTIONS,
+              { color: '#00FF00', lineWidth: 4 }
+            );
+            window.drawLandmarks(ctx, results.poseLandmarks, {
+              color: '#FF0000',
+              lineWidth: 2,
+            });
+
+            // Identify key points for the right arm (assuming right-handed shot)
+            const rightShoulder =
+              results.poseLandmarks[POSE_LANDMARKS.RIGHT_SHOULDER];
+            const rightElbow =
+              results.poseLandmarks[POSE_LANDMARKS.RIGHT_ELBOW];
+            const rightWrist =
+              results.poseLandmarks[POSE_LANDMARKS.RIGHT_WRIST];
+
+            // Check if all necessary landmarks are detected for the right arm with sufficient visibility
+            if (
+              rightShoulder &&
+              rightElbow &&
+              rightWrist &&
+              rightShoulder.visibility > 0.5 &&
+              rightElbow.visibility > 0.5 &&
+              rightWrist.visibility > 0.5
+            ) {
+              // Calculate the angle between upper arm (shoulder-elbow) and forearm (elbow-wrist)
+              const angle = calculateAngle(
+                rightShoulder,
+                rightElbow,
+                rightWrist
+              );
+              currentAngle = angle.toFixed(2); // Update current angle state with 2 decimal places
+              //alert(currentAngle);
+              currentAngleDisplay.textContent = `${currentAngle}°`;
+
+              // Draw the angle text on the canvas near the elbow
+              ctx.font = '30px Arial';
+              ctx.fillStyle = 'yellow';
+              // Position text relative to canvas size and elbow coordinates
+              ctx.fillText(
+                `Angle: ${currentAngle}°`,
+                rightElbow.x * videoCanvas.width + 10,
+                rightElbow.y * videoCanvas.height - 10
+              );
+            } else {
+              currentAngle = null; // No valid arm detected or confidence too low
+              currentAngleDisplay.textContent = 'N/A';
+            }
+          }
+        } else {
+          currentAngle = null; // No pose detected in the frame
+          currentAngleDisplay.textContent = 'N/A';
+        }
+      }
+
+      /**
+       * Processes each video frame for pose detection.
+       * This function is called recursively using requestVideoFrameCallback.
+       */
+      async function processVideoFrame() {
+        if (!videoPlayer || videoPlayer.paused || videoPlayer.ended || !pose) {
+          animationFrameId = null; // Stop the loop
+          return;
+        }
+
+        // Perform pose detection on the current video frame
+        // MediaPipe Pose expects an HTMLVideoElement
+        try {
+          await pose.send({ image: videoPlayer });
+        } catch (error) {
+          console.error('Error sending image to MediaPipe Pose:', error);
+          // Optionally, stop processing or show an error message to the user
+        }
+
+        // Request the next frame callback to continue the loop
+        animationFrameId =
+          videoPlayer.requestVideoFrameCallback(processVideoFrame);
+      }
+
+      /**
+       * Initializes the MediaPipe Pose model.
+       */
+      function initializePose() {
+        if (window.Pose) {
+          // Check if MediaPipe Pose is loaded globally
+          pose = new window.Pose({
+            locateFile: (file) => {
+              return `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`;
+            },
+          });
+
+          pose.setOptions({
+            modelComplexity: 1, // Can be 0, 1, or 2. Higher is more accurate but slower.
+            smoothLandmarks: true, // Smooths landmark positions across frames
+            enableSegmentation: false, // Disables segmentation mask generation (not needed here)
+            smoothSegmentation: false, // Disables smoothing for segmentation
+            minDetectionConfidence: 0.5, // Minimum confidence for a pose detection to be considered successful
+            minTrackingConfidence: 0.5, // Minimum confidence for a pose landmark to be tracked successfully
+          });
+
+          pose.onResults(onResults);
+        } else {
+          console.error(
+            'MediaPipe Pose library not loaded. Check CDN script tags.'
+          );
+        }
+      }
+
+      // --- Event Listeners ---
+
+      // Handle video file upload
+      videoUploadInput.addEventListener('change', (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          // Revoke previous object URL if it exists to free up memory
+          if (videoPlayer.src) {
+            URL.revokeObjectURL(videoPlayer.src);
+          }
+          const url = URL.createObjectURL(file);
+          videoPlayer.src = url;
+          anglesLog = []; // Clear previous angle log
+          currentAngle = null; // Clear current angle display
+          currentAngleDisplay.textContent = 'N/A';
+          isPaused = true; // Pause video on new upload
+          updateAnglesLogDisplay(); // Clear log display
+          toggleControlsVisibility(true); // Show controls
+          loadingSpinner.classList.remove('hidden'); // Show loading spinner
+        }
+      });
+
+      // When video metadata is loaded (duration, dimensions etc.)
+      videoPlayer.addEventListener('loadedmetadata', () => {
+        videoCanvas.width = videoPlayer.videoWidth;
+        videoCanvas.height = videoPlayer.videoHeight;
+        loadingSpinner.classList.add('hidden'); // Hide loading spinner
+        // Start processing loop only if not paused
+        if (!isPaused) {
+          if (animationFrameId) {
+            videoPlayer.cancelVideoFrameCallback(animationFrameId);
+          }
+          animationFrameId =
+            videoPlayer.requestVideoFrameCallback(processVideoFrame);
+        }
+      });
+
+      // When video data is loaded and ready to play
+      videoPlayer.addEventListener('loadeddata', () => {
+        loadingSpinner.classList.add('hidden'); // Ensure loading spinner is hidden
+      });
+
+      // When video is buffering
+      videoPlayer.addEventListener('waiting', () => {
+        loadingSpinner.classList.remove('hidden'); // Show loading spinner
+      });
+
+      // When video starts playing after buffering
+      videoPlayer.addEventListener('playing', () => {
+        loadingSpinner.classList.add('hidden'); // Hide loading spinner
+      });
+
+      // Toggle play/pause
+      playPauseBtn.addEventListener('click', () => {
+        if (videoPlayer.paused) {
+          videoPlayer.play();
+          isPaused = false;
+          playIcon.style.display = 'none';
+          pauseIcon.style.display = 'inline';
+          playPauseText.textContent = 'Pause';
+          // Start processing if not already running
+          if (!animationFrameId) {
+            animationFrameId =
+              videoPlayer.requestVideoFrameCallback(processVideoFrame);
+          }
+        } else {
+          videoPlayer.pause();
+          isPaused = true;
+          playIcon.style.display = 'inline';
+          pauseIcon.style.display = 'none';
+          playPauseText.textContent = 'Play';
+          // Cancel processing if paused
+          if (animationFrameId) {
+            videoPlayer.cancelVideoFrameCallback(animationFrameId);
+            animationFrameId = null;
+          }
+        }
+      });
+
+      // When video ends
+      videoPlayer.addEventListener('ended', () => {
+        isPaused = true;
+        playIcon.style.display = 'inline';
+        pauseIcon.style.display = 'none';
+        playPauseText.textContent = 'Play';
+        if (animationFrameId) {
+          videoPlayer.cancelVideoFrameCallback(animationFrameId);
+          animationFrameId = null;
+        }
+      });
+
+      // Log current angle
+      logAngleBtn.addEventListener('click', () => {
+        if (currentAngle !== null) {
+          anglesLog.push({
+            angle: currentAngle,
+            timestamp: videoPlayer.currentTime.toFixed(2),
+          });
+          updateAnglesLogDisplay();
+        }
+      });
+
+      // Reset video and state
+      resetBtn.addEventListener('click', () => {
+        if (videoPlayer.src) {
+          URL.revokeObjectURL(videoPlayer.src);
+        }
+        videoPlayer.src = '';
+        anglesLog = [];
+        currentAngle = null;
+        currentAngleDisplay.textContent = 'N/A';
+        isPaused = true;
+        updateAnglesLogDisplay();
+        toggleControlsVisibility(false); // Hide controls
+        ctx.clearRect(0, 0, videoCanvas.width, videoCanvas.height); // Clear canvas
+        if (animationFrameId) {
+          videoPlayer.cancelVideoFrameCallback(animationFrameId);
+          animationFrameId = null;
+        }
+        playIcon.style.display = 'inline';
+        pauseIcon.style.display = 'none';
+        playPauseText.textContent = 'Play';
+      });
+
+      // Download button (with disclaimer)
+      downloadBtn.addEventListener('click', () => {
+        // This function serves as a placeholder.
+        // Real-time video re-encoding with overlaid annotations directly in the browser
+        // is a highly resource-intensive and complex task. It typically requires:
+        // 1. Capturing each canvas frame as an image (e.g., using toDataURL or OffscreenCanvas).
+        // 2. Using a client-side video encoding library (like ffmpeg.wasm) to compile these frames
+        //    into a new video file, which is a very large library and adds significant complexity.
+        // 3. Alternatively, sending all frames or the original video to a server for processing.
+        // Due to these limitations, this client-side demo only shows live annotations.
+        const messageBox = document.createElement('div');
+        messageBox.className =
+          'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50';
+        messageBox.innerHTML = `
+                <div class="bg-gray-800 p-6 rounded-lg shadow-xl text-center max-w-sm">
+                    <h3 class="text-xl font-bold text-blue-400 mb-4">Feature Information</h3>
+                    <p class="text-gray-300 mb-6">
+                        Downloading the annotated video is not directly supported client-side due to browser limitations for video re-encoding. This feature would typically require server-side processing or a complex client-side video encoding library (like ffmpeg.wasm). The annotations are shown live on the video.
+                    </p>
+                    <button id="close-message-box" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
+                        Got It!
+                    </button>
+                </div>
+            `;
+        document.body.appendChild(messageBox);
+
+        document
+          .getElementById('close-message-box')
+          .addEventListener('click', () => {
+            document.body.removeChild(messageBox);
+          });
+      });
+
+      // Toggle instructions visibility
+      toggleInstructionsBtn.addEventListener('click', () => {
+        const isHidden = instructionsContent.classList.toggle('hidden');
+        if (isHidden) {
+          chevronIcon.innerHTML = '<path d="m9 18 6-6-6-6"/>'; // ChevronRight
+        } else {
+          chevronIcon.innerHTML = '<path d="m6 9 6 6 6-6"/>'; // ChevronDown
+        }
+      });
+
+      // --- Initialization ---
+      window.onload = function () {
+        initializePose(); // Initialize MediaPipe Pose when the window loads
+        updateAnglesLogDisplay(); // Initialize log display
+        toggleControlsVisibility(false); // Hide controls initially
+      };
+    </script>
+  </body>
+</html>
+
