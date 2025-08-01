@@ -380,17 +380,30 @@
           // Draw the pose landmarks and connections on the canvas
           // Green color for connections, Red for landmarks
           // MediaPipe's drawing_utils are available globally after CDN import
+          const connectionIndices = [
+            POSE_LANDMARKS.RIGHT_SHOULDER,
+            POSE_LANDMARKS.RIGHT_ELBOW,
+            POSE_LANDMARKS.RIGHT_WRIST,
+          ];
           if (window.drawConnectors && window.drawLandmarks && window.Pose) {
             window.drawConnectors(
               ctx,
-              results.poseLandmarks,
-              window.Pose.POSE_CONNECTIONS,
+              results.poseLandmarks.filter((_, index) =>
+                connectionIndices.includes(index)
+              ),
+              window.POSE_CONNECTIONS,
               { color: '#00FF00', lineWidth: 4 }
             );
-            window.drawLandmarks(ctx, results.poseLandmarks, {
-              color: '#FF0000',
-              lineWidth: 2,
-            });
+            window.drawLandmarks(
+              ctx,
+              results.poseLandmarks.filter((_, index) =>
+                connectionIndices.includes(index)
+              ),
+              {
+                color: '#FF0000',
+                lineWidth: 2,
+              }
+            );
 
             // Identify key points for the right arm (assuming right-handed shot)
             const rightShoulder =
