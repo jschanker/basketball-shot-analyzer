@@ -4,8 +4,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+       
     <title>AI Basketball Shot Angle Detector</title>
+       
     <!-- Tailwind CSS for styling -->
+       
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter font -->
     <link
@@ -200,6 +203,10 @@
           </p>
         </div>
         <video id="video-player" playsinline muted></video>
+        <!--<canvas
+          id="video-canvas"
+          style="max-width: 100%; height: auto"
+        ></canvas>-->
         <canvas id="video-canvas"></canvas>
       </div>
 
@@ -262,7 +269,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
 
     <script>
-      console.log('POSE', Pose);
       // DOM Elements
       const videoUploadInput = document.getElementById('video-upload');
       const videoPlayer = document.getElementById('video-player');
@@ -308,10 +314,10 @@
        */
       function calculateAngle(A, B, C) {
         // Vectors BA and BC
-        const BAx = A.x - B.x;
-        const BAy = A.y - B.y;
-        const BCx = C.x - B.x;
-        const BCy = C.y - B.y;
+        const BAx = (A.x - B.x) * videoCanvas.width;
+        const BAy = (A.y - B.y) * videoCanvas.height;
+        const BCx = (C.x - B.x) * videoCanvas.width;
+        const BCy = (C.y - B.y) * videoCanvas.height;
 
         // Dot product of BA and BC
         const dotProduct = BAx * BCx + BAy * BCy;
@@ -391,6 +397,7 @@
               results.poseLandmarks.filter((_, index) =>
                 connectionIndices.includes(index)
               ),
+              //.map(({ x, y }) => ({ x, y })),
               window.POSE_CONNECTIONS,
               { color: '#00FF00', lineWidth: 4 }
             );
@@ -399,6 +406,7 @@
               results.poseLandmarks.filter((_, index) =>
                 connectionIndices.includes(index)
               ),
+              //.map(({ x, y }) => ({ x, y })),
               {
                 color: '#FF0000',
                 lineWidth: 2,
@@ -428,8 +436,8 @@
                 rightElbow,
                 rightWrist
               );
+
               currentAngle = angle.toFixed(2); // Update current angle state with 2 decimal places
-              //alert(currentAngle);
               currentAngleDisplay.textContent = `${currentAngle}°`;
 
               // Draw the angle text on the canvas near the elbow
@@ -629,6 +637,10 @@
         playPauseText.textContent = 'Play';
       });
 
+      window.addEventListener('keypress', (e) =>
+        videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause()
+      );
+
       // Download button (with disclaimer)
       downloadBtn.addEventListener('click', () => {
         // This function serves as a placeholder.
@@ -681,4 +693,3 @@
     </script>
   </body>
 </html>
-
