@@ -4,11 +4,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-       
+
     <title>AI Basketball Shot Angle Detector</title>
-       
+
     <!-- Tailwind CSS for styling -->
-       
+
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Inter font -->
     <link
@@ -226,12 +226,17 @@
             Loading video and pose model...
           </p>
         </div>
-        <video id="video-player" playsinline muted></video>
-        <!--<canvas
+        <video
+          id="video-player"
+          playsinline
+          muted
+          style="display: none"
+        ></video>
+        <canvas
           id="video-canvas"
           style="max-width: 100%; height: auto"
-        ></canvas>-->
-        <canvas id="video-canvas"></canvas>
+        ></canvas>
+        <!--<canvas id="video-canvas"></canvas>-->
       </div>
 
       <!-- Angle Display and Log -->
@@ -465,8 +470,9 @@
        */
       function onResults(results) {
         // Clear the canvas and redraw the video frame to ensure it's always visible
-        ctx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
-        ctx.drawImage(videoPlayer, 0, 0, videoCanvas.width, videoCanvas.height);
+        // want to do this even when there are no results
+        // ctx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
+        // ctx.drawImage(videoPlayer, 0, 0, videoCanvas.width, videoCanvas.height);
 
         if (results.poseLandmarks) {
           // Draw the pose landmarks and connections on the canvas
@@ -485,7 +491,16 @@
               ),
               //.map(({ x, y }) => ({ x, y })),
               window.POSE_CONNECTIONS,
-              { color: '#00FF00', lineWidth: 4 }
+              {
+                color: '#00FF00',
+                lineWidth: Math.max(
+                  Math.round(
+                    (4 * videoPlayer.videoWidth) /
+                      videoCanvas.getBoundingClientRect().width
+                  ),
+                  4
+                ),
+              }
             );
             window.drawLandmarks(
               ctx,
@@ -495,7 +510,11 @@
               //.map(({ x, y }) => ({ x, y })),
               {
                 color: '#FF0000',
-                lineWidth: 2,
+                lineWidth: Math.max(
+                  2,
+                  (2 * videoPlayer.videoWidth) /
+                    videoCanvas.getBoundingClientRect().width
+                ),
               }
             );
 
@@ -526,7 +545,14 @@
               currentAngleDisplay.textContent = `${currentAngle}°`;
 
               // Draw the angle text on the canvas near the elbow
-              ctx.font = '30px Arial';
+              ctx.font = `${Math.max(
+                Math.floor(
+                  (30 * videoPlayer.videoWidth) /
+                    videoCanvas.getBoundingClientRect().width
+                ),
+                30
+              )}px Arial`;
+
               ctx.fillStyle = 'yellow';
               // Position text relative to canvas size and elbow coordinates
               ctx.fillText(
@@ -558,6 +584,14 @@
         // Perform pose detection on the current video frame
         // MediaPipe Pose expects an HTMLVideoElement
         try {
+          ctx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
+          ctx.drawImage(
+            videoPlayer,
+            0,
+            0,
+            videoCanvas.width,
+            videoCanvas.height
+          );
           await pose.send({ image: videoPlayer });
         } catch (error) {
           console.error('Error sending image to MediaPipe Pose:', error);
@@ -595,6 +629,32 @@
           console.error(
             'MediaPipe Pose library not loaded. Check CDN script tags.'
           );
+        }
+      }
+
+      function togglePause() {
+        if (videoPlayer.paused) {
+          videoPlayer.play();
+          isPaused = false;
+          playIcon.style.display = 'none';
+          pauseIcon.style.display = 'inline';
+          playPauseText.textContent = 'Pause';
+          // Start processing if not already running
+          if (!animationFrameId) {
+            animationFrameId =
+              videoPlayer.requestVideoFrameCallback(processVideoFrame);
+          }
+        } else {
+          videoPlayer.pause();
+          isPaused = true;
+          playIcon.style.display = 'inline';
+          pauseIcon.style.display = 'none';
+          playPauseText.textContent = 'Play';
+          // Cancel processing if paused
+          if (animationFrameId) {
+            videoPlayer.cancelVideoFrameCallback(animationFrameId);
+            animationFrameId = null;
+          }
         }
       }
 
@@ -642,6 +702,14 @@
       // When video data is loaded and ready to play
       videoPlayer.addEventListener('loadeddata', () => {
         loadingSpinner.classList.add('hidden'); // Ensure loading spinner is hidden
+        console.log('Video data ready');
+        videoPlayer.currentTime = 0;
+      });
+
+      videoPlayer.addEventListener('seeked', () => {
+        // Draw the current video frame onto the canvas
+        ctx.clearRect(0, 0, videoCanvas.width, videoCanvas.height);
+        ctx.drawImage(videoPlayer, 0, 0, videoCanvas.width, videoCanvas.height);
       });
 
       // When video is buffering
@@ -655,31 +723,11 @@
       });
 
       // Toggle play/pause
-      playPauseBtn.addEventListener('click', () => {
-        if (videoPlayer.paused) {
-          videoPlayer.play();
-          isPaused = false;
-          playIcon.style.display = 'none';
-          pauseIcon.style.display = 'inline';
-          playPauseText.textContent = 'Pause';
-          // Start processing if not already running
-          if (!animationFrameId) {
-            animationFrameId =
-              videoPlayer.requestVideoFrameCallback(processVideoFrame);
-          }
-        } else {
-          videoPlayer.pause();
-          isPaused = true;
-          playIcon.style.display = 'inline';
-          pauseIcon.style.display = 'none';
-          playPauseText.textContent = 'Play';
-          // Cancel processing if paused
-          if (animationFrameId) {
-            videoPlayer.cancelVideoFrameCallback(animationFrameId);
-            animationFrameId = null;
-          }
-        }
-      });
+      playPauseBtn.addEventListener('click', togglePause);
+      window.addEventListener('keypress', togglePause);
+      /*window.addEventListener('keypress', (e) =>
+        videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause()
+      );*/
 
       // When video ends
       videoPlayer.addEventListener('ended', () => {
@@ -726,10 +774,6 @@
         pauseIcon.style.display = 'none';
         playPauseText.textContent = 'Play';
       });
-
-      window.addEventListener('keypress', (e) =>
-        videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause()
-      );
 
       // Download button (with disclaimer)
       downloadBtn.addEventListener('click', () => {
