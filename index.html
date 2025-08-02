@@ -121,6 +121,30 @@
         <input id="video-upload" type="file" accept="video/*" class="hidden" />
 
         <button
+          id="use-camera-btn"
+          class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-camera mr-2"
+          >
+            <path
+              d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"
+            />
+            <circle cx="12" cy="13" r="3" />
+          </svg>
+          Use Camera
+        </button>
+
+        <button
           id="play-pause-btn"
           class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
           style="display: none"
@@ -279,6 +303,7 @@
       const anglesLogList = document.getElementById('angles-log-list');
       const noAnglesMessage = document.getElementById('no-angles-message');
       const playPauseBtn = document.getElementById('play-pause-btn');
+      const useCameraBtn = document.getElementById('use-camera-btn'); // New camera button
       const playIcon = document.getElementById('play-icon');
       const pauseIcon = document.getElementById('pause-icon');
       const playPauseText = document.getElementById('play-pause-text');
@@ -301,6 +326,8 @@
       let currentAngle = null; // Current detected angle
       let anglesLog = []; // Log of angles recorded by the user
       let isPaused = true; // Video playback state
+      let isCameraActive = false; // New flag to track camera stream
+      let currentStream = null; // To hold the MediaStream object for camera
 
       // --- Utility Functions ---
 
@@ -371,6 +398,65 @@
         resetBtn.style.display = show ? 'flex' : 'none';
       }
 
+      /**
+       * Stops the currently active camera stream, if any.
+       */
+      function stopCamera() {
+        if (currentStream) {
+          currentStream.getTracks().forEach((track) => track.stop());
+          videoPlayer.srcObject = null;
+          isCameraActive = false;
+          currentStream = null;
+          console.log('Camera stopped.');
+        }
+      }
+
+      /**
+       * Starts the camera stream and sets it as video source.
+       */
+      async function startCamera() {
+        stopCamera(); // Stop any existing camera stream or video file
+
+        loadingSpinner.classList.remove('hidden');
+        loadingSpinner.querySelector('p').textContent =
+          'Requesting camera access...';
+
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+          });
+          currentStream = stream;
+          videoPlayer.srcObject = stream;
+          videoPlayer.play(); // Autoplay camera stream
+          isPaused = false;
+          isCameraActive = true;
+          toggleControlsVisibility(true);
+          playIcon.style.display = 'none';
+          pauseIcon.style.display = 'inline';
+          playPauseText.textContent = 'Pause';
+          loadingSpinner.classList.add('hidden'); // Hide loading spinner
+
+          // Set canvas dimensions to camera stream dimensions once loaded
+          videoPlayer.onloadedmetadata = () => {
+            videoCanvas.width = videoPlayer.videoWidth;
+            videoCanvas.height = videoPlayer.videoHeight;
+            if (!animationFrameId) {
+              animationFrameId =
+                videoPlayer.requestVideoFrameCallback(processVideoFrame);
+            }
+          };
+        } catch (err) {
+          console.error('Error accessing camera: ', err);
+          alert(
+            'Could not access camera. Please ensure you have a camera connected and have granted permission.'
+          );
+          loadingSpinner.classList.add('hidden');
+          loadingSpinner.querySelector('p').textContent =
+            'Error accessing camera.';
+          toggleControlsVisibility(false); // Hide controls if camera fails
+        }
+      }
+
       // --- MediaPipe Processing ---
 
       /**
@@ -436,7 +522,6 @@
                 rightElbow,
                 rightWrist
               );
-
               currentAngle = angle.toFixed(2); // Update current angle state with 2 decimal places
               currentAngleDisplay.textContent = `${currentAngle}°`;
 
@@ -518,6 +603,7 @@
       // Handle video file upload
       videoUploadInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
+        stopCamera(); // Stop camera if active
         if (file) {
           // Revoke previous object URL if it exists to free up memory
           if (videoPlayer.src) {
@@ -534,6 +620,9 @@
           loadingSpinner.classList.remove('hidden'); // Show loading spinner
         }
       });
+
+      // Handle Use Camera button click
+      useCameraBtn.addEventListener('click', startCamera);
 
       // When video metadata is loaded (duration, dimensions etc.)
       videoPlayer.addEventListener('loadedmetadata', () => {
@@ -617,6 +706,7 @@
 
       // Reset video and state
       resetBtn.addEventListener('click', () => {
+        stopCamera(); // Stop camera stream on reset
         if (videoPlayer.src) {
           URL.revokeObjectURL(videoPlayer.src);
         }
