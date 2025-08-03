@@ -296,6 +296,10 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <!--<script
+      src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js"
+      crossorigin="anonymous"
+    ></script>-->
 
     <script>
       // DOM Elements
@@ -483,12 +487,44 @@
             POSE_LANDMARKS.RIGHT_ELBOW,
             POSE_LANDMARKS.RIGHT_WRIST,
           ];
+          const landmarksToDraw = results.poseLandmarks.filter((_, index) =>
+            connectionIndices.includes(index)
+          );
+          const shoulderYWristX = {
+            x: landmarksToDraw[2].x,
+            y: landmarksToDraw[0].y,
+            z: landmarksToDraw[0].z,
+          };
+
+          // Identify key points for the right arm (assuming right-handed shot)
+          const rightShoulder =
+            results.poseLandmarks[POSE_LANDMARKS.RIGHT_SHOULDER];
+          const rightElbow = results.poseLandmarks[POSE_LANDMARKS.RIGHT_ELBOW];
+          const rightWrist = results.poseLandmarks[POSE_LANDMARKS.RIGHT_WRIST];
+
+          const belowShoulderToWrist = [rightShoulder, shoulderYWristX];
+
           if (window.drawConnectors && window.drawLandmarks && window.Pose) {
             window.drawConnectors(
               ctx,
-              results.poseLandmarks.filter((_, index) =>
-                connectionIndices.includes(index)
-              ),
+              landmarksToDraw,
+              //.map(({ x, y }) => ({ x, y })),
+              window.POSE_CONNECTIONS,
+              {
+                color: '#00FF00',
+                lineWidth: Math.max(
+                  Math.round(
+                    (4 * videoPlayer.videoWidth) /
+                      videoCanvas.getBoundingClientRect().width
+                  ),
+                  4
+                ),
+              }
+            );
+            // draw horizontal line from shoulder to below elbow
+            window.drawConnectors(
+              ctx,
+              belowShoulderToWrist,
               //.map(({ x, y }) => ({ x, y })),
               window.POSE_CONNECTIONS,
               {
@@ -504,9 +540,7 @@
             );
             window.drawLandmarks(
               ctx,
-              results.poseLandmarks.filter((_, index) =>
-                connectionIndices.includes(index)
-              ),
+              landmarksToDraw.concat(belowShoulderToWrist),
               //.map(({ x, y }) => ({ x, y })),
               {
                 color: '#FF0000',
@@ -517,14 +551,6 @@
                 ),
               }
             );
-
-            // Identify key points for the right arm (assuming right-handed shot)
-            const rightShoulder =
-              results.poseLandmarks[POSE_LANDMARKS.RIGHT_SHOULDER];
-            const rightElbow =
-              results.poseLandmarks[POSE_LANDMARKS.RIGHT_ELBOW];
-            const rightWrist =
-              results.poseLandmarks[POSE_LANDMARKS.RIGHT_WRIST];
 
             // Check if all necessary landmarks are detected for the right arm with sufficient visibility
             if (
@@ -560,6 +586,34 @@
                 rightElbow.x * videoCanvas.width + 10,
                 rightElbow.y * videoCanvas.height - 10
               );
+
+              if (true /* condition to be added later */) {
+                // Calculate the angle between upper arm (shoulder-elbow) and forearm (elbow-wrist)
+                const releaseAngle = calculateAngle(
+                  shoulderYWristX,
+                  rightShoulder,
+                  rightElbow
+                );
+                currentReleaseAngle = releaseAngle.toFixed(2); // Update current angle state with 2 decimal places
+                // currentAngleDisplay.textContent = `${currentAngle}°`;
+
+                // Draw the angle text on the canvas near the elbow
+                ctx.font = `${Math.max(
+                  Math.floor(
+                    (30 * videoPlayer.videoWidth) /
+                      videoCanvas.getBoundingClientRect().width
+                  ),
+                  30
+                )}px Arial`;
+
+                ctx.fillStyle = 'yellow';
+                // Position text relative to canvas size and elbow coordinates
+                ctx.fillText(
+                  `Release Angle: ${currentReleaseAngle}°`,
+                  rightElbow.x * videoCanvas.width + 10,
+                  rightElbow.y * videoCanvas.height + 70
+                );
+              }
             } else {
               currentAngle = null; // No valid arm detected or confidence too low
               currentAngleDisplay.textContent = 'N/A';
@@ -631,6 +685,22 @@
           );
         }
       }
+
+      /*
+      async function initializeObjectDetection() {
+        const vision = await FilesetResolver.forVisionTasks(
+          // path/to/wasm/root
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+        );
+        objectDetector = await ObjectDetector.createFromOptions(vision, {
+          baseOptions: {
+            modelAssetPath: `https://storage.googleapis.com/mediapipe-tasks/object_detector/efficientdet_lite0_uint8.tflite`,
+          },
+          scoreThreshold: 0.5,
+          runningMode: 'video',
+        });
+      }
+      */
 
       function togglePause() {
         if (videoPlayer.paused) {
