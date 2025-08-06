@@ -296,12 +296,20 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js"></script>
+    <!-- TensorFlow.js and COCO-SSD for Object Detection -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <!--<script
       src="https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js"
       crossorigin="anonymous"
     ></script>-->
 
-    <script>
+    <script type="module">
+      // Import necessary modules from MediaPipe Tasks
+      import {
+        ImageClassifier,
+        FilesetResolver,
+      } from 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js';
       // DOM Elements
       const videoUploadInput = document.getElementById('video-upload');
       const videoPlayer = document.getElementById('video-player');
@@ -331,12 +339,33 @@
       const ctx = videoCanvas.getContext('2d');
 
       let pose; // MediaPipe Pose instance
+      let classifier; // MediaPipe ImageClassifier instance
+      let detector; // COCO-SSD object detection model instance
       let animationFrameId = null; // To store animation frame ID for cleanup
       let currentAngle = null; // Current detected angle
+      let currentReleaseAngle = null;
       let anglesLog = []; // Log of angles recorded by the user
       let isPaused = true; // Video playback state
       let isCameraActive = false; // New flag to track camera stream
       let currentStream = null; // To hold the MediaStream object for camera
+      let lastWristPosition = null;
+
+      // Stores the current frame's crop information for coordinate transformation
+      let currentCropInfo = {
+        x: 0,
+        y: 0,
+        width: 0,
+        height: 0,
+        scaleX: 1,
+        scaleY: 1,
+      };
+
+      // Ball Release Detection State
+      let isBallHeld = false; // True if ball is currently considered held
+      let ballReleaseDetected = false; // True when release is detected
+      const basketballConfidenceThreshold = 0.04; // Min confidence for 'basketball' classification
+      const releaseDetectionFrames = 2; // Number of frames to check for consistent 'no basketball'
+      let framesWithoutBasketball = 0; // Counter for frames without basketball near hand
 
       // --- Utility Functions ---
 
@@ -389,7 +418,7 @@
             listItem.className =
               'flex justify-between items-center text-gray-300 bg-gray-600 p-2 rounded-md';
             listItem.innerHTML = `
-                        <span>Angle: <span class="font-bold text-yellow-300">${entry.angle}°</span></span>
+                        <span>Release Angle: <span class="font-bold text-yellow-300">${entry.releaseAngle}°</span></span>
                         <span>Time: <span class="font-bold text-yellow-300">${entry.timestamp}s</span></span>
                     `;
             anglesLogList.appendChild(listItem);
@@ -490,6 +519,7 @@
           const landmarksToDraw = results.poseLandmarks.filter((_, index) =>
             connectionIndices.includes(index)
           );
+
           const shoulderYWristX = {
             x: landmarksToDraw[2].x,
             y: landmarksToDraw[0].y,
@@ -501,7 +531,7 @@
             results.poseLandmarks[POSE_LANDMARKS.RIGHT_SHOULDER];
           const rightElbow = results.poseLandmarks[POSE_LANDMARKS.RIGHT_ELBOW];
           const rightWrist = results.poseLandmarks[POSE_LANDMARKS.RIGHT_WRIST];
-
+          let currentWristPosition = null;
           const belowShoulderToWrist = [rightShoulder, shoulderYWristX];
 
           if (window.drawConnectors && window.drawLandmarks && window.Pose) {
@@ -569,6 +599,7 @@
               );
               currentAngle = angle.toFixed(2); // Update current angle state with 2 decimal places
               currentAngleDisplay.textContent = `${currentAngle}°`;
+              currentWristPosition = { x: rightWrist.x, y: rightWrist.y };
 
               // Draw the angle text on the canvas near the elbow
               ctx.font = `${Math.max(
@@ -587,7 +618,59 @@
                 rightElbow.y * videoCanvas.height - 10
               );
 
-              if (true /* condition to be added later */) {
+              // If basketball is currently "held", draw an ORANGE circle around the wrist
+              if (isBallHeld) {
+                /*console.log(
+                  'ISBALL',
+                  rightWrist.x *
+                    (videoPlayer.videoWidth ** 2 /
+                      videoCanvas.getBoundingClientRect().width),
+                  rightWrist.y *
+                    (videoPlayer.videoHeight ** 2 /
+                      videoCanvas.getBoundingClientRect().height),
+                  videoCanvas.width,
+                  videoCanvas.getBoundingClientRect().width,
+                  videoPlayer.videoWidth,
+                  rightWrist.x *
+                    (videoCanvas.getBoundingClientRect().width /
+                      videoPlayer.videoWidth)
+                );*/
+
+                ctx.beginPath();
+                ctx.arc(
+                  rightWrist.x * videoPlayer.videoWidth,
+                  rightWrist.y * videoPlayer.videoHeight,
+                  //transformedLandmarksForDrawing[POSE_LANDMARKS.RIGHT_WRIST].y,
+                  Math.max(
+                    20,
+                    Math.round(
+                      (20 * videoPlayer.videoWidth) /
+                        videoCanvas.getBoundingClientRect().width
+                    )
+                  ), // Radius
+                  0,
+                  2 * Math.PI
+                );
+                ctx.strokeStyle = 'orange'; // Changed to orange
+                ctx.lineWidth = 5;
+                ctx.stroke();
+                ctx.fillStyle = 'orange'; // Changed to orange
+
+                ctx.font = `${Math.max(
+                  Math.floor(
+                    (30 * videoPlayer.videoWidth) /
+                      videoCanvas.getBoundingClientRect().width
+                  ),
+                  30
+                )}px Arial`;
+
+                // Position text relative to canvas size and elbow coordinates
+                ctx.fillText(
+                  'Ball Released',
+                  rightWrist.x * videoCanvas.width + 25,
+                  rightWrist.y * videoCanvas.height + 10
+                );
+
                 // Calculate the angle between upper arm (shoulder-elbow) and forearm (elbow-wrist)
                 const releaseAngle = calculateAngle(
                   shoulderYWristX,
@@ -614,6 +697,41 @@
                   rightElbow.y * videoCanvas.height + 70
                 );
               }
+
+              // Update last wrist position if valid pose was detected
+              if (currentWristPosition) {
+                lastWristPosition = currentWristPosition;
+              } else {
+                lastWristPosition = null; // Clear if wrist is not detected
+              }
+              /*
+              if (true /* condition to be added later ) {
+                // Calculate the angle between upper arm (shoulder-elbow) and forearm (elbow-wrist)
+                const releaseAngle = calculateAngle(
+                  shoulderYWristX,
+                  rightShoulder,
+                  rightElbow
+                );
+                const currentReleaseAngle = releaseAngle.toFixed(2); // Update current angle state with 2 decimal places
+                // currentAngleDisplay.textContent = `${currentAngle}°`;
+
+                // Draw the angle text on the canvas near the elbow
+                ctx.font = `${Math.max(
+                  Math.floor(
+                    (30 * videoPlayer.videoWidth) /
+                      videoCanvas.getBoundingClientRect().width
+                  ),
+                  30
+                )}px Arial`;
+
+                ctx.fillStyle = 'yellow';
+                // Position text relative to canvas size and elbow coordinates
+                ctx.fillText(
+                  `Release Angle: ${currentReleaseAngle}°`,
+                  rightElbow.x * videoCanvas.width + 10,
+                  rightElbow.y * videoCanvas.height + 70
+                );
+              }*/
             } else {
               currentAngle = null; // No valid arm detected or confidence too low
               currentAngleDisplay.textContent = 'N/A';
@@ -630,7 +748,13 @@
        * This function is called recursively using requestVideoFrameCallback.
        */
       async function processVideoFrame() {
-        if (!videoPlayer || videoPlayer.paused || videoPlayer.ended || !pose) {
+        if (
+          !videoPlayer ||
+          videoPlayer.paused ||
+          videoPlayer.ended ||
+          !pose ||
+          !detector
+        ) {
           animationFrameId = null; // Stop the loop
           return;
         }
@@ -646,10 +770,165 @@
             videoCanvas.width,
             videoCanvas.height
           );
+
+          /*
+          const predictions = await detector.detect(videoPlayer);
+          // Find the most confident 'sports ball' (which includes basketballs)
+          const basketballPrediction = predictions.find(
+            (p) => p.class === 'sports ball' && p.score > 0
+          );
+          // console.log('PREDICTIONS', predictions);
+          if (basketballPrediction) {
+            console.log('BASKETBALL', basketballPrediction);
+            togglePause();
+            // Draw bounding box of basketball for visualization
+            ctx.strokeStyle = 'lime';
+            ctx.lineWidth = 4;
+            // Scale bbox coordinates to main canvas dimensions
+            const [bballX, bballY, bballWidth, bballHeight] =
+              basketballPrediction.bbox;
+            const scaledX =
+              bballX * (videoCanvas.width / videoPlayer.videoWidth);
+            const scaledY =
+              bballY * (videoCanvas.height / videoPlayer.videoHeight);
+            const scaledWidth =
+              bballWidth * (videoCanvas.width / videoPlayer.videoWidth);
+            const scaledHeight =
+              bballHeight * (videoCanvas.height / videoPlayer.videoHeight);
+            console.log(scaledX, scaledY, scaledWidth, scaledHeight);
+            ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+          }
+          */
+
           await pose.send({ image: videoPlayer });
         } catch (error) {
           console.error('Error sending image to MediaPipe Pose:', error);
           // Optionally, stop processing or show an error message to the user
+        }
+
+        // Now, perform image classification to detect basketball near the hand
+        let basketballDetectedThisFrame = false;
+        if (lastWristPosition && POSE_LANDMARKS) {
+          // Define a region around the wrist for classification
+          // Convert normalized wrist position to pixel coordinates
+          const wristX = lastWristPosition.x * videoPlayer.videoWidth;
+          const wristY = lastWristPosition.y * videoPlayer.videoHeight;
+
+          // Define a square region around the wrist (e.g., 150x150 pixels)
+          const cropSize = 200; // Increased crop size to capture the ball better
+          const cropX = Math.max(0, wristX - cropSize / 2);
+          const cropY = Math.max(0, wristY - cropSize);
+          const actualCropWidth = Math.min(
+            cropSize,
+            videoPlayer.videoWidth - cropX
+          );
+          const actualCropHeight = Math.min(
+            cropSize,
+            videoPlayer.videoHeight - cropY
+          );
+
+          if (actualCropWidth > 0 && actualCropHeight > 0) {
+            videoCanvas
+              .getContext('2d')
+              .strokeRect(cropX, cropY, actualCropWidth, actualCropHeight);
+            const tempCanvas = document.createElement('canvas');
+            const tempCtx = tempCanvas.getContext('2d');
+            tempCanvas.width = actualCropWidth;
+            tempCanvas.height = actualCropHeight;
+
+            // Draw the cropped region of the video onto the temporary canvas
+            tempCtx.drawImage(
+              videoPlayer,
+              cropX,
+              cropY,
+              actualCropWidth,
+              actualCropHeight, // Source rectangle
+              0,
+              0,
+              actualCropWidth,
+              actualCropHeight // Destination rectangle
+            );
+
+            // Perform classification on the cropped image
+            const classifications = classifier.classify(tempCanvas);
+
+            if (
+              true ||
+              (classifications && classifications.classifications.length > 0)
+            ) {
+              const categories = classifications.classifications[0].categories;
+              const basketballCategory = categories.find(
+                (cat) => cat.categoryName === 'basketball'
+              );
+              /*console.log(
+                basketballCategory,
+                categories.slice().sort((x, y) => y.score - x.score),
+                categories
+                  .slice()
+                  .sort((x, y) => y.score - x.score)
+                  .slice(0, 20)
+                  .map((cat) => cat.categoryName)
+              );*/
+
+              if (
+                basketballCategory &&
+                categories
+                  .slice()
+                  .sort((x, y) => y.score - x.score)
+                  .slice(0, 20)
+                  .find((cat) => cat.categoryName === 'basketball') &&
+                basketballCategory.score > basketballConfidenceThreshold
+              ) {
+                basketballDetectedThisFrame = true;
+                console.log('basketball detected');
+              }
+            }
+          }
+        }
+
+        // --- Ball Release Detection Logic ---
+        if (!videoPlayer.paused && ballReleaseDetected) {
+          // If video was paused by release and now playing, reset flags
+          ballReleaseDetected = false;
+          isBallHeld = false;
+          framesWithoutBasketball = 0;
+        }
+
+        if (basketballDetectedThisFrame) {
+          isBallHeld = true;
+          framesWithoutBasketball = 0; // Reset counter if basketball is detected
+        } else {
+          if (isBallHeld) {
+            framesWithoutBasketball++;
+            if (framesWithoutBasketball >= releaseDetectionFrames) {
+              // Basketball was held, and now consistently not detected for several frames
+              if (!ballReleaseDetected) {
+                ballReleaseDetected = true;
+                isBallHeld = false;
+                togglePause();
+                console.log(
+                  `Ball released at ${videoPlayer.currentTime.toFixed(
+                    2
+                  )}s! Pausing video.`
+                );
+                // Log angles automatically on release
+                /*if (
+                  currentElbowAngle !== null &&
+                  currentReleaseAngle !== null
+                ) {
+                  anglesLog.push({
+                    elbowAngle: currentElbowAngle,
+                    releaseAngle: currentReleaseAngle,
+                    timestamp: videoPlayer.currentTime.toFixed(2),
+                  });
+                  updateAnglesLogDisplay();
+                }*/
+              }
+            }
+          } else {
+            // If ball was never held, just keep counter at 0
+            framesWithoutBasketball = 0;
+          }
         }
 
         // Request the next frame callback to continue the loop
@@ -660,7 +939,20 @@
       /**
        * Initializes the MediaPipe Pose model.
        */
-      function initializePose() {
+      async function initializePose() {
+        // Initialize MediaPipe Image Classifier
+        const vision = await FilesetResolver.forVisionTasks(
+          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+        );
+        classifier = await ImageClassifier.createFromOptions(vision, {
+          baseOptions: {
+            // Corrected modelAssetPath
+            modelAssetPath:
+              'https://storage.googleapis.com/mediapipe-models/image_classifier/efficientnet_lite0/int8/1/efficientnet_lite0.tflite',
+          },
+          runningMode: 'IMAGE', // Use IMAGE mode for classifying cropped frames
+        });
+
         if (window.Pose) {
           // Check if MediaPipe Pose is loaded globally
           pose = new window.Pose({
@@ -679,6 +971,12 @@
           });
 
           pose.onResults(onResults);
+
+          if (window.cocoSsd && window.tf) {
+            detector = await window.cocoSsd.load();
+          } else {
+            throw new Error('TensorFlow.js or COCO-SSD library not loaded.');
+          }
         } else {
           console.error(
             'MediaPipe Pose library not loaded. Check CDN script tags.'
@@ -816,6 +1114,7 @@
         if (currentAngle !== null) {
           anglesLog.push({
             angle: currentAngle,
+            releaseAngle: currentReleaseAngle,
             timestamp: videoPlayer.currentTime.toFixed(2),
           });
           updateAnglesLogDisplay();
