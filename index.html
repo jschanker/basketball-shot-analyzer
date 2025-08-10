@@ -71,23 +71,42 @@
           id="instructions-content"
           class="mt-4 text-gray-300 text-sm space-y-2"
         >
-          <p>1. Click "Upload Video" to select a basketball shot video.</p>
           <p>
-            2. The video will appear below. Click the Play/Pause button to
-            control playback.
+            Click "Upload Video" to select a basketball shot video, OR click
+            "Use Camera" for live analysis.
           </p>
           <p>
-            3. As the video plays, the app will attempt to detect your arm and
-            display the angle between your upper arm and forearm in real-time.
+            2. The video/camera feed will appear below. Click the Play/Pause
+            button to control playback.
           </p>
           <p>
-            4. When you see the moment of ball release, click "Log Current
-            Angle" to record that specific angle and timestamp.
+            3. As the video plays, The app will attempt to detect a single
+            player's right shoulder, elbow and wrist in real-time. If it does,
+            it will drawing lines connecting the shoulder, elbow and wrist and
+            display the **Elbow Angle** (between upper arm and forearm). It will
+            then determine if a boxed area slightly above their wrist is a
+            basketball. If a basketball is detected, it will then wait a few
+            frames before it's no longer detected and pause the video when this
+            occurs. It will determine this to be the **Release Angle** (between
+            upper arm and a horizontal line from the shoulder).
+            <b
+              >Note for this to work properly, there should only be one person
+              in the frame with a minimal number of other objects and a clear
+              picture of a basketball, preferably taken from the side. The
+              person also needs to be releasing the ball with their right
+              hand.</b
+            >
+          </p>
+          <p>
+            4. When the video pauses, you can click "Log Current Angle" to
+            record that specific release angle and timestamp if it's indeed a
+            person shooting to maintain a list of release angles.
           </p>
           <p class="font-bold text-yellow-300">
-            Note: Generating a new video file with overlaid annotations is a
-            complex task for web browsers and is not supported in this
-            client-side demo. The annotations are shown live on the video.
+            Note: A possible future feature would be to generate a new video
+            file with overlaid annotations. For now, the annotations are shown
+            live on the video and you could take screenshots if you're using
+            your phone.
           </p>
         </div>
       </div>
@@ -814,7 +833,7 @@
           const wristX = lastWristPosition.x * videoPlayer.videoWidth;
           const wristY = lastWristPosition.y * videoPlayer.videoHeight;
 
-          // Define a square region around the wrist (e.g., 150x150 pixels)
+          // Define a square region around the wrist (e.g., 200x200 pixels)
           const cropSize = 200; // Increased crop size to capture the ball better
           const cropX = Math.max(0, wristX - cropSize / 2);
           const cropY = Math.max(0, wristY - cropSize);
@@ -852,10 +871,7 @@
             // Perform classification on the cropped image
             const classifications = classifier.classify(tempCanvas);
 
-            if (
-              true ||
-              (classifications && classifications.classifications.length > 0)
-            ) {
+            if (classifications && classifications.classifications.length > 0) {
               const categories = classifications.classifications[0].categories;
               const basketballCategory = categories.find(
                 (cat) => cat.categoryName === 'basketball'
@@ -905,12 +921,14 @@
               if (!ballReleaseDetected) {
                 ballReleaseDetected = true;
                 isBallHeld = false;
+                //if (currentReleaseAngle) {
                 togglePause();
                 console.log(
                   `Ball released at ${videoPlayer.currentTime.toFixed(
                     2
                   )}s! Pausing video.`
                 );
+                //}
                 // Log angles automatically on release
                 /*if (
                   currentElbowAngle !== null &&
