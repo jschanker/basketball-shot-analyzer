@@ -162,7 +162,6 @@
           </svg>
           Use Camera
         </button>
-
         <button
           id="toggle-camera-btn"
           class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
@@ -410,7 +409,7 @@
       // Ball Release Detection State
       let isBallHeld = false; // True if ball is currently considered held
       let ballReleaseDetected = false; // True when release is detected
-      const basketballConfidenceThreshold = 0.04; // Min confidence for 'basketball' classification
+      const basketballConfidenceThreshold = 0.1; // Min confidence for 'basketball' classification
       const releaseDetectionFrames = 2; // Number of frames to check for consistent 'no basketball'
       let framesWithoutBasketball = 0; // Counter for frames without basketball near hand
 
@@ -575,7 +574,7 @@
           const connectionIndices = [
             POSE_LANDMARKS.RIGHT_SHOULDER,
             POSE_LANDMARKS.RIGHT_ELBOW,
-            POSE_LANDMARKS.RIGHT_WRIST,
+            POSE_LANDMARKS.RIGHT_INDEX,
           ];
           const landmarksToDraw = results.poseLandmarks.filter((_, index) =>
             connectionIndices.includes(index)
@@ -591,7 +590,7 @@
           const rightShoulder =
             results.poseLandmarks[POSE_LANDMARKS.RIGHT_SHOULDER];
           const rightElbow = results.poseLandmarks[POSE_LANDMARKS.RIGHT_ELBOW];
-          const rightWrist = results.poseLandmarks[POSE_LANDMARKS.RIGHT_WRIST];
+          const rightWrist = results.poseLandmarks[POSE_LANDMARKS.RIGHT_INDEX];
           let currentWristPosition = null;
           const belowShoulderToWrist = [rightShoulder, shoulderYWristX];
 
@@ -760,7 +759,10 @@
               }
 
               // Update last wrist position if valid pose was detected
-              if (currentWristPosition) {
+              if (
+                currentWristPosition &&
+                currentWristPosition.y < rightShoulder.y
+              ) {
                 lastWristPosition = currentWristPosition;
               } else {
                 lastWristPosition = null; // Clear if wrist is not detected
@@ -801,6 +803,220 @@
         } else {
           currentAngle = null; // No pose detected in the frame
           currentAngleDisplay.textContent = 'N/A';
+        }
+      }
+
+      /**
+       * A simple region growing algorithm to find pixels of similar color/brightness.
+       * @param {ImageData} imageData The image data to process.
+       * @param {number} startX The starting X coordinate.
+       * @param {number} startY The starting Y coordinate.
+       * @param {number} tolerance The color/brightness tolerance.
+       * @returns {Object} An object with `pixels` array and `bounds` object.
+       */
+      function regionGrow(imageData, startX, startY, tolerance) {
+        const width = imageData.width;
+        const height = imageData.height;
+        const data = imageData.data;
+        const seedColor = getPixelColor(data, startX, startY, width);
+        const visited = new Uint8Array(width * height);
+        const stack = [{ x: startX, y: startY }];
+        const regionPixels = [];
+        const bounds = {
+          minX: startX,
+          minY: startY,
+          maxX: startX,
+          maxY: startY,
+        };
+
+        function getPixelColor(data, x, y, width) {
+          const i = (y * width + x) * 4;
+          return [data[i], data[i + 1], data[i + 2]];
+        }
+
+        function colorDistance(c1, c2) {
+          return Math.sqrt(
+            Math.pow(c1[0] - c2[0], 2) +
+              Math.pow(c1[1] - c2[1], 2) +
+              Math.pow(c1[2] - c2[2], 2)
+          );
+        }
+
+        while (stack.length > 0) {
+          const p = stack.pop();
+          const x = p.x;
+          const y = p.y;
+          const i = y * width + x;
+
+          if (x < 0 || x >= width || y < 0 || y >= height || visited[i])
+            continue;
+
+          const currentColor = getPixelColor(data, x, y, width);
+          //if (colorDistance(seedColor, currentColor) <= tolerance) {
+          if (currentColor[0] - 5 > currentColor[1] && currentColor[2] < 127) {
+            // use for orangish
+            visited[i] = 1;
+            regionPixels.push({ x, y });
+
+            // Update bounds
+            bounds.minX = Math.min(bounds.minX, x);
+            bounds.minY = Math.min(bounds.minY, y);
+            bounds.maxX = Math.max(bounds.maxX, x);
+            bounds.maxY = Math.max(bounds.maxY, y);
+
+            // Add neighbors to stack
+            for (let i = 1; i < 8; i++) {
+              stack.push({ x: x + i, y });
+              stack.push({ x: x - i, y });
+              stack.push({ x, y: y + i });
+              stack.push({ x, y: y - i });
+            }
+          }
+        }
+        return { pixels: regionPixels, bounds };
+      }
+
+      /**
+       * Finds the longest vertical and horizontal line segments within a region of pixels.
+       * @param {Array<Object>} pixels An array of pixel objects with x, y properties.
+       * @returns {Object} An object with lengths of the longest vertical and horizontal lines.
+       */
+      function findLongestLines(pixels) {
+        const pixelSet = new Set(pixels.map((p) => `${p.x},${p.y}`));
+        let maxHorizontal = 0;
+        let maxVertical = 0;
+        const visited = new Set();
+
+        // Horizontal scan
+        for (const p of pixels) {
+          if (visited.has(`${p.x},${p.y}`)) continue;
+          let currentLength = 0;
+          let x = p.x;
+          while (pixelSet.has(`${x},${p.y}`)) {
+            visited.add(`${x},${p.y}`);
+            currentLength++;
+            x++;
+          }
+          maxHorizontal = Math.max(maxHorizontal, currentLength);
+        }
+
+        // Vertical scan
+        visited.clear();
+        for (const p of pixels) {
+          if (visited.has(`${p.x},${p.y}`)) continue;
+          let currentLength = 0;
+          let y = p.y;
+          while (pixelSet.has(`${p.x},${y}`)) {
+            visited.add(`${p.x},${y}`);
+            currentLength++;
+            y++;
+          }
+          maxVertical = Math.max(maxVertical, currentLength);
+        }
+
+        return { maxHorizontal, maxVertical };
+      }
+
+      /**
+       * The new function to perform the geometric check for a basketball.
+       * @param {HTMLCanvasElement} canvas The canvas element with the video frame.
+       * @param {Object} wristPoint The normalized wrist coordinates.
+       * @returns {boolean} True if a basketball is likely detected, false otherwise.
+       */
+      function geometricBasketballCheck(canvas, wristPoint, cropSize = 200) {
+        if (!wristPoint) return false;
+
+        const videoWidth = videoPlayer.videoWidth;
+        const videoHeight = videoPlayer.videoHeight;
+        const ctx = canvas.getContext('2d');
+
+        // Define the square region above the wrist
+        // const cropSize = 200;
+        const wristX = wristPoint.x * videoWidth;
+        const wristY = wristPoint.y * videoHeight;
+        const cropX = Math.max(0, wristX - cropSize / 2);
+        const cropY = Math.max(0, wristY - cropSize);
+        const actualCropWidth = Math.min(cropSize, videoWidth - cropX);
+        const actualCropHeight = Math.min(cropSize, videoHeight - cropY);
+
+        if (actualCropWidth <= 0 || actualCropHeight <= 0) {
+          //geometricCheckStatus.textContent = 'N/A';
+          return false;
+        }
+
+        const imageData = ctx.getImageData(
+          cropX,
+          cropY,
+          actualCropWidth,
+          actualCropHeight
+        );
+
+        // Find a seed point for region growing (center of the crop)
+        const seedX = Math.floor(actualCropWidth / 2);
+        const seedY = Math.floor((3 / 4) * actualCropHeight);
+
+        // Perform region growing
+        // The tolerance and expand factor can be tuned for better results
+        const region = regionGrow(imageData, seedX, seedY, 60); // Tolerance of 30
+
+        //console.log(region);
+        //debugger;
+
+        const outlineWidth = region.bounds.maxX - region.bounds.minX;
+        const outlineHeight = region.bounds.maxY - region.bounds.minY;
+        ctx.strokeStyle = 'teal'; // Green outline
+        ctx.lineWidth = 5;
+        // Add the crop offsets to the region bounds for correct positioning on the main canvas
+        ctx.strokeRect(
+          cropX + region.bounds.minX,
+          cropY + region.bounds.minY,
+          outlineWidth,
+          outlineHeight
+        );
+        ctx.fillStyle = 'purple';
+        //console.log(canvas, region.pixels);
+        region.pixels.forEach((px) =>
+          ctx.fillRect(cropX + px.x, cropY + px.y, 1, 1)
+        );
+        ctx.fillStyle = 'red';
+        //debugger;
+        // If the region is too small, it's probably not a basketball
+        if (region.pixels.length < 100) {
+          //geometricCheckStatus.textContent = 'Too small';
+          return false;
+        }
+
+        // Find the longest vertical and horizontal line segments in the grown region
+        const { maxHorizontal, maxVertical } = findLongestLines(region.pixels);
+
+        // Check if the lengths are sufficiently large and close to each other
+        const minSize = 100; // Minimum pixel size for a basketball
+        const aspectRatioTolerance = 0.2; // 20% tolerance for aspect ratio (0.8 to 1.2)
+
+        const aspectRatio = maxVertical / maxHorizontal;
+        const isSufficientlyLarge =
+          maxHorizontal >= minSize && maxVertical >= minSize;
+        const isSufficientlyCircular =
+          aspectRatio >= 1 - aspectRatioTolerance &&
+          aspectRatio <= 1 + aspectRatioTolerance;
+
+        console.log(cropY + region.bounds.maxY, wristY);
+        const isSufficientlyCloseToWrist =
+          cropY + region.bounds.maxY >= wristY - 5;
+
+        // Log the status for debugging
+        if (
+          isSufficientlyLarge &&
+          isSufficientlyCircular &&
+          isSufficientlyCloseToWrist
+        ) {
+          //geometricCheckStatus.textContent = '✔ Confirmed';
+          //geometricCheckStatus.style.color = 'lime';
+          return true;
+        } else {
+          //geometricCheckStatus.textContent = '❌ Failed';
+          //geometricCheckStatus.style.color = 'red';
+          return false;
         }
       }
 
@@ -929,13 +1145,14 @@
               );*/
 
               if (
-                basketballCategory &&
-                categories
-                  .slice()
-                  .sort((x, y) => y.score - x.score)
-                  .slice(0, 20)
-                  .find((cat) => cat.categoryName === 'basketball') &&
-                basketballCategory.score > basketballConfidenceThreshold
+                geometricBasketballCheck(videoCanvas, lastWristPosition) ||
+                (basketballCategory &&
+                  categories
+                    .slice()
+                    .sort((x, y) => y.score - x.score)
+                    .slice(0, 20)
+                    .find((cat) => cat.categoryName === 'basketball') &&
+                  basketballCategory.score > basketballConfidenceThreshold)
               ) {
                 basketballDetectedThisFrame = true;
                 console.log('basketball detected');
