@@ -164,6 +164,31 @@
         </button>
 
         <button
+          id="toggle-camera-btn"
+          class="bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
+          style="display: none"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            class="lucide lucide-camera-off mr-2"
+          >
+            <line x1="2" x2="22" y1="2" y2="22" />
+            <path d="M11.66 4H14.5L17 7h3a2 2 0 0 1 2 2v9a2 2 0 0 1-.36.98" />
+            <path d="M5.64 5.64A2 2 0 0 0 4 7v9a2 2 0 0 0 2 2h9" />
+            <path d="M10.12 10.12A3 3 0 1 0 14 14" />
+          </svg>
+          <span id="toggle-camera-text">Back Camera</span>
+        </button>
+
+        <button
           id="play-pause-btn"
           class="bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-6 rounded-full shadow-lg transition duration-300 ease-in-out transform hover:scale-105 flex items-center"
           style="display: none"
@@ -340,6 +365,8 @@
       const noAnglesMessage = document.getElementById('no-angles-message');
       const playPauseBtn = document.getElementById('play-pause-btn');
       const useCameraBtn = document.getElementById('use-camera-btn'); // New camera button
+      const toggleCameraBtn = document.getElementById('toggle-camera-btn');
+      const toggleCameraText = document.getElementById('toggle-camera-text');
       const playIcon = document.getElementById('play-icon');
       const pauseIcon = document.getElementById('pause-icon');
       const playPauseText = document.getElementById('play-pause-text');
@@ -366,6 +393,7 @@
       let anglesLog = []; // Log of angles recorded by the user
       let isPaused = true; // Video playback state
       let isCameraActive = false; // New flag to track camera stream
+      let isFrontCamera = true; // Flag to track current camera (true = front, false = back)
       let currentStream = null; // To hold the MediaStream object for camera
       let lastWristPosition = null;
 
@@ -469,9 +497,17 @@
       }
 
       /**
+       * Toggles between front and back camera.
+       */
+      function toggleCamera() {
+        isFrontCamera = !isFrontCamera;
+        startCamera(isFrontCamera ? 'user' : 'environment');
+      }
+
+      /**
        * Starts the camera stream and sets it as video source.
        */
-      async function startCamera() {
+      async function startCamera(facingMode = 'user') {
         stopCamera(); // Stop any existing camera stream or video file
 
         loadingSpinner.classList.remove('hidden');
@@ -480,7 +516,9 @@
 
         try {
           const stream = await navigator.mediaDevices.getUserMedia({
-            video: true,
+            video: {
+              facingMode: facingMode,
+            },
           });
           currentStream = stream;
           videoPlayer.srcObject = stream;
@@ -488,6 +526,9 @@
           isPaused = false;
           isCameraActive = true;
           toggleControlsVisibility(true);
+          toggleCameraBtn.style.display = 'flex';
+          toggleCameraText.textContent =
+            facingMode === 'user' ? 'Back Camera' : 'Front Camera';
           playIcon.style.display = 'none';
           pauseIcon.style.display = 'inline';
           playPauseText.textContent = 'Pause';
@@ -511,6 +552,7 @@
           loadingSpinner.querySelector('p').textContent =
             'Error accessing camera.';
           toggleControlsVisibility(false); // Hide controls if camera fails
+          toggleCameraBtn.style.display = 'none';
         }
       }
 
@@ -1050,6 +1092,7 @@
       videoUploadInput.addEventListener('change', (event) => {
         const file = event.target.files[0];
         stopCamera(); // Stop camera if active
+        toggleCameraBtn.style.display = 'none';
         if (file) {
           // Revoke previous object URL if it exists to free up memory
           if (videoPlayer.src) {
@@ -1069,6 +1112,9 @@
 
       // Handle Use Camera button click
       useCameraBtn.addEventListener('click', startCamera);
+
+      // Handle Toggle Camera button click
+      toggleCameraBtn.addEventListener('click', toggleCamera);
 
       // When video metadata is loaded (duration, dimensions etc.)
       videoPlayer.addEventListener('loadedmetadata', () => {
@@ -1142,6 +1188,7 @@
       // Reset video and state
       resetBtn.addEventListener('click', () => {
         stopCamera(); // Stop camera stream on reset
+        toggleCameraBtn.style.display = 'none';
         if (videoPlayer.src) {
           URL.revokeObjectURL(videoPlayer.src);
         }
@@ -1214,3 +1261,4 @@
     </script>
   </body>
 </html>
+
