@@ -395,6 +395,23 @@
       let isFrontCamera = true; // Flag to track current camera (true = front, false = back)
       let currentStream = null; // To hold the MediaStream object for camera
       let lastWristPosition = null;
+      // #B6655A
+      const basketballColors = [
+        [255, 165, 0], // Classic orange
+        [205, 133, 63], // Burnt Sienna / Darker orange
+        [255, 106, 0], // Vibrant orange
+        [184, 115, 51], // A more brownish/tan shade
+        [150, 100, 50], // Even darker brown-orange
+      ]
+        .map((color) =>
+          Array.from(new Array(color[0]).keys()).map((red) => [
+            color[0] - red,
+            (color[1] * (color[0] - red)) / color[0],
+            (color[2] * (color[0] - red)) / color[0],
+          ])
+        )
+        .flat();
+      let approximateBasketballSize = 200; // approximate basketball size by distance from elbow to wrist
 
       // Stores the current frame's crop information for coordinate transformation
       let currentCropInfo = {
@@ -410,7 +427,7 @@
       let isBallHeld = false; // True if ball is currently considered held
       let ballReleaseDetected = false; // True when release is detected
       const basketballConfidenceThreshold = 0.1; // Min confidence for 'basketball' classification
-      const releaseDetectionFrames = 2; // Number of frames to check for consistent 'no basketball'
+      const releaseDetectionFrames = 1; // Number of frames to check for consistent 'no basketball'
       let framesWithoutBasketball = 0; // Counter for frames without basketball near hand
 
       // --- Utility Functions ---
@@ -661,6 +678,21 @@
               currentAngleDisplay.textContent = `${currentAngle}°`;
               currentWristPosition = { x: rightWrist.x, y: rightWrist.y };
 
+              approximateBasketballSize =
+                Math.max(
+                  Math.round(
+                    Math.sqrt(
+                      ((rightElbow.x - rightWrist.x) *
+                        videoPlayer.videoWidth) **
+                        2 +
+                        ((rightElbow.y - rightWrist.y) *
+                          videoPlayer.videoHeight) **
+                          2
+                    )
+                  ),
+                  10
+                ) || 200;
+
               // Draw the angle text on the canvas near the elbow
               ctx.font = `${Math.max(
                 Math.floor(
@@ -806,6 +838,14 @@
         }
       }
 
+      function colorDistance(c1, c2) {
+        return Math.sqrt(
+          Math.pow(c1[0] - c2[0], 2) +
+            Math.pow(c1[1] - c2[1], 2) +
+            Math.pow(c1[2] - c2[2], 2)
+        );
+      }
+
       /**
        * A simple region growing algorithm to find pixels of similar color/brightness.
        * @param {ImageData} imageData The image data to process.
@@ -834,14 +874,6 @@
           return [data[i], data[i + 1], data[i + 2]];
         }
 
-        function colorDistance(c1, c2) {
-          return Math.sqrt(
-            Math.pow(c1[0] - c2[0], 2) +
-              Math.pow(c1[1] - c2[1], 2) +
-              Math.pow(c1[2] - c2[2], 2)
-          );
-        }
-
         while (stack.length > 0) {
           const p = stack.pop();
           const x = p.x;
@@ -853,7 +885,33 @@
 
           const currentColor = getPixelColor(data, x, y, width);
           //if (colorDistance(seedColor, currentColor) <= tolerance) {
-          if (currentColor[0] - 5 > currentColor[1] && currentColor[2] < 127) {
+          /*          const basketballColors = [
+            [255, 165, 0], // Classic orange
+            [205, 133, 63], // Burnt Sienna / Darker orange
+            [255, 106, 0], // Vibrant orange
+            [184, 115, 51], // A more brownish/tan shade
+            [150, 100, 50], // Even darker brown-orange
+          ]
+            .map((color) =>
+              Array.from(new Array(color[0]).keys()).map((red) => [
+                color[0] - red,
+                (color[1] * (color[0] - red)) / color[0],
+                (color[2] * (color[0] - red)) / color[0],
+              ])
+            )
+            .flat();*/
+          //console.log(basketballColors);
+          /*   basketballColors.map((bballColor) =>
+              colorDistance(bballColor, currentColor)
+            )
+          );*/
+
+          if (
+            basketballColors.some(
+              (bballColor) => colorDistance(bballColor, currentColor) <= 30
+            )
+          ) {
+            // if (currentColor[0] - 5 > currentColor[1] && currentColor[2] < 127) {
             // use for orangish
             visited[i] = 1;
             regionPixels.push({ x, y });
@@ -874,6 +932,95 @@
           }
         }
         return { pixels: regionPixels, bounds };
+      }
+
+      function getAllOrangish(
+        imageData,
+        expandOut = Math.floor(approximateBasketballSize / 20),
+        tolerance = 30
+      ) {
+        const width = imageData.width;
+        const height = imageData.height;
+        const data = imageData.data;
+        const regionPixels = [];
+        const bounds = {
+          minX: Infinity,
+          minY: Infinity,
+          maxX: -Infinity,
+          maxY: -Infinity,
+        };
+
+        function getPixelColor(data, x, y, width) {
+          const i = (y * width + x) * 4;
+          return [data[i], data[i + 1], data[i + 2]];
+        }
+
+        for (let x = 0; x < width; x++) {
+          for (let y = 0; y < height; y++) {
+            const currentColor = getPixelColor(data, x, y, width);
+            if (
+              currentColor[0] - 50 > currentColor[1] ||
+              basketballColors.some(
+                (bballColor) => colorDistance(bballColor, currentColor) <= 0
+              )
+            ) {
+              for (let r = -expandOut; r < expandOut; r++) {
+                for (let c = -expandOut; c < expandOut; c++) {
+                  if (
+                    x + c < width &&
+                    x + c >= 0 &&
+                    y + r >= 0 &&
+                    y + r < height
+                  ) {
+                    regionPixels[x + c] = regionPixels[x + c] || [];
+                    if (!regionPixels[x + c].includes(y + r)) {
+                      regionPixels[x + c].push(y + r);
+                      // Update bounds
+                      bounds.minX = Math.min(bounds.minX, x + c);
+                      bounds.minY = Math.min(bounds.minY, y + r);
+                      bounds.maxX = Math.max(bounds.maxX, x + c);
+                      bounds.maxY = Math.max(bounds.maxY, y + r);
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        return {
+          pixels: regionPixels.map((ys, x) => ys.map((y) => ({ x, y }))).flat(),
+          bounds,
+        };
+        /*
+         if (
+              basketballColors.some(
+                (bballColor) => colorDistance(bballColor, currentColor) <= 30
+              )
+            ) {
+              // if (currentColor[0] - 5 > currentColor[1] && currentColor[2] < 127) {
+              // use for orangish
+              visited[i] = 1;
+              regionPixels.push({ x, y });
+
+              // Update bounds
+              bounds.minX = Math.min(bounds.minX, x);
+              bounds.minY = Math.min(bounds.minY, y);
+              bounds.maxX = Math.max(bounds.maxX, x);
+              bounds.maxY = Math.max(bounds.maxY, y);
+
+              // Add neighbors to stack
+              for (let i = 1; i < 8; i++) {
+                stack.push({ x: x + i, y });
+                stack.push({ x: x - i, y });
+                stack.push({ x, y: y + i });
+                stack.push({ x, y: y - i });
+              }
+            }
+          }
+          return { pixels: regionPixels, bounds };
+        }
+        */
       }
 
       /**
@@ -918,12 +1065,46 @@
       }
 
       /**
+       * Finds a pixel within the imageData that falls within a given color range.
+       * @param {ImageData} imageData The image data to search.
+       * @param {Array<number>} targetColor RGB color to match (e.g., [255, 165, 0] for orange).
+       * @param {number} tolerance Color tolerance for the match (Euclidean distance).
+       * @returns {Object|null} An object with x and y coordinates, or null if no match is found.
+       */
+      function findSeedPixel(imageData, targetColor, tolerance) {
+        const data = imageData.data;
+        const width = imageData.width;
+        const height = imageData.height;
+        const [tr, tg, tb] = targetColor;
+
+        for (let y = height - 1; y >= 0; y--) {
+          for (let x = 0; x < width; x++) {
+            const i = (y * width + x) * 4;
+            const currentColor = [data[i], data[i + 1], data[i + 2]];
+
+            if (
+              basketballColors.some(
+                (bballColor) => colorDistance(bballColor, currentColor) <= 30
+              )
+            ) {
+              return { x, y };
+            }
+          }
+        }
+        return null;
+      }
+
+      /**
        * The new function to perform the geometric check for a basketball.
        * @param {HTMLCanvasElement} canvas The canvas element with the video frame.
        * @param {Object} wristPoint The normalized wrist coordinates.
        * @returns {boolean} True if a basketball is likely detected, false otherwise.
        */
-      function geometricBasketballCheck(canvas, wristPoint, cropSize = 200) {
+      function geometricBasketballCheck(
+        canvas,
+        wristPoint,
+        cropSize = approximateBasketballSize
+      ) {
         if (!wristPoint) return false;
 
         const videoWidth = videoPlayer.videoWidth;
@@ -935,7 +1116,7 @@
         const wristX = wristPoint.x * videoWidth;
         const wristY = wristPoint.y * videoHeight;
         const cropX = Math.max(0, wristX - cropSize / 2);
-        const cropY = Math.max(0, wristY - cropSize);
+        const cropY = Math.max(0, wristY - cropSize - 5);
         const actualCropWidth = Math.min(cropSize, videoWidth - cropX);
         const actualCropHeight = Math.min(cropSize, videoHeight - cropY);
 
@@ -952,12 +1133,15 @@
         );
 
         // Find a seed point for region growing (center of the crop)
-        const seedX = Math.floor(actualCropWidth / 2);
-        const seedY = Math.floor((3 / 4) * actualCropHeight);
+        const orangeSeedPoint = findSeedPixel(imageData, [255, 165, 0], 30); // Tolerance of 50
+        const seedX = orangeSeedPoint?.x || Math.floor(actualCropWidth / 2);
+        const seedY =
+          orangeSeedPoint?.y || Math.floor((3 / 4) * actualCropHeight);
 
         // Perform region growing
         // The tolerance and expand factor can be tuned for better results
-        const region = regionGrow(imageData, seedX, seedY, 60); // Tolerance of 30
+        // const region = regionGrow(imageData, seedX, seedY, 30); // Tolerance of 30
+        const region = getAllOrangish(imageData);
 
         //console.log(region);
         //debugger;
@@ -974,7 +1158,7 @@
           outlineHeight
         );
         ctx.fillStyle = 'purple';
-        //console.log(canvas, region.pixels);
+        console.log(canvas, region.pixels);
         region.pixels.forEach((px) =>
           ctx.fillRect(cropX + px.x, cropY + px.y, 1, 1)
         );
@@ -1092,7 +1276,7 @@
           const wristY = lastWristPosition.y * videoPlayer.videoHeight;
 
           // Define a square region around the wrist (e.g., 200x200 pixels)
-          const cropSize = 200; // Increased crop size to capture the ball better
+          const cropSize = approximateBasketballSize; // Increased crop size to capture the ball better
           const cropX = Math.max(0, wristX - cropSize / 2);
           const cropY = Math.max(0, wristY - cropSize);
           const actualCropWidth = Math.min(
@@ -1478,4 +1662,3 @@
     </script>
   </body>
 </html>
-
