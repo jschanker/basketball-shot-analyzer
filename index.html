@@ -788,12 +788,14 @@
                   rightElbow.x * videoCanvas.width + 10,
                   rightElbow.y * videoCanvas.height + 70
                 );
+                togglePause();
               }
 
               // Update last wrist position if valid pose was detected
               if (
                 currentWristPosition &&
-                currentWristPosition.y < rightShoulder.y
+                currentWristPosition.y < rightShoulder.y &&
+                currentWristPosition.y < rightElbow.y
               ) {
                 lastWristPosition = currentWristPosition;
               } else {
@@ -1115,8 +1117,9 @@
         // const cropSize = 200;
         const wristX = wristPoint.x * videoWidth;
         const wristY = wristPoint.y * videoHeight;
+        const spaceAboveWristToLook = 5;
         const cropX = Math.max(0, wristX - cropSize / 2);
-        const cropY = Math.max(0, wristY - cropSize - 5);
+        const cropY = Math.max(0, wristY - cropSize - spaceAboveWristToLook);
         const actualCropWidth = Math.min(cropSize, videoWidth - cropX);
         const actualCropHeight = Math.min(cropSize, videoHeight - cropY);
 
@@ -1174,19 +1177,30 @@
         const { maxHorizontal, maxVertical } = findLongestLines(region.pixels);
 
         // Check if the lengths are sufficiently large and close to each other
-        const minSize = 100; // Minimum pixel size for a basketball
+        const minSize = Math.min(50, actualCropWidth / 4, actualCropHeight / 4); // Minimum pixel size for a basketball
         const aspectRatioTolerance = 0.2; // 20% tolerance for aspect ratio (0.8 to 1.2)
 
         const aspectRatio = maxVertical / maxHorizontal;
         const isSufficientlyLarge =
           maxHorizontal >= minSize && maxVertical >= minSize;
         const isSufficientlyCircular =
-          aspectRatio >= 1 - aspectRatioTolerance &&
-          aspectRatio <= 1 + aspectRatioTolerance;
+          true ||
+          (aspectRatio >= 1 - aspectRatioTolerance &&
+            aspectRatio <= 1 + aspectRatioTolerance);
 
-        console.log(cropY + region.bounds.maxY, wristY);
+        console.log(cropY + region.bounds.maxY, wristY, cropY, region.bounds);
         const isSufficientlyCloseToWrist =
-          cropY + region.bounds.maxY >= wristY - 5;
+          cropY + region.bounds.maxY + 2 >= wristY - spaceAboveWristToLook;
+
+        console.log(
+          maxHorizontal,
+          maxVertical,
+          actualCropWidth,
+          actualCropHeight,
+          isSufficientlyLarge,
+          isSufficientlyCircular,
+          isSufficientlyCloseToWrist
+        );
 
         // Log the status for debugging
         if (
@@ -1196,6 +1210,7 @@
         ) {
           //geometricCheckStatus.textContent = '✔ Confirmed';
           //geometricCheckStatus.style.color = 'lime';
+          console.log('CONDITION MET');
           return true;
         } else {
           //geometricCheckStatus.textContent = '❌ Failed';
