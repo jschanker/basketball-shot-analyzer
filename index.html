@@ -760,7 +760,11 @@
               }
 
               // Update last wrist position if valid pose was detected
-              if (currentWristPosition) {
+              if (
+                currentWristPosition &&
+                currentWristPosition.y < rightShoulder.y &&
+                currentWristPosition.y < rightElbow.y
+              ) {
                 lastWristPosition = currentWristPosition;
               } else {
                 lastWristPosition = null; // Clear if wrist is not detected
@@ -1261,4 +1265,5 @@
     </script>
   </body>
 </html>
+
 
