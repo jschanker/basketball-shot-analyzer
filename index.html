@@ -426,7 +426,7 @@
       // Ball Release Detection State
       let isBallHeld = false; // True if ball is currently considered held
       let ballReleaseDetected = false; // True when release is detected
-      const basketballConfidenceThreshold = 0.1; // Min confidence for 'basketball' classification
+      const basketballConfidenceThreshold = 0.3; // Min confidence for 'basketball' classification
       const releaseDetectionFrames = 1; // Number of frames to check for consistent 'no basketball'
       let framesWithoutBasketball = 0; // Counter for frames without basketball near hand
 
@@ -788,7 +788,7 @@
                   rightElbow.x * videoCanvas.width + 10,
                   rightElbow.y * videoCanvas.height + 70
                 );
-                togglePause();
+                // togglePause();
               }
 
               // Update last wrist position if valid pose was detected
@@ -1161,11 +1161,11 @@
           outlineHeight
         );
         ctx.fillStyle = 'purple';
-        console.log(canvas, region.pixels);
-        region.pixels.forEach((px) =>
+        //console.log(canvas, region.pixels);
+        /*region.pixels.forEach((px) =>
           ctx.fillRect(cropX + px.x, cropY + px.y, 1, 1)
-        );
-        ctx.fillStyle = 'red';
+        );*/
+        ctx.fillStyle = 'blue'; //red
         //debugger;
         // If the region is too small, it's probably not a basketball
         if (region.pixels.length < 100) {
@@ -1174,25 +1174,41 @@
         }
 
         // Find the longest vertical and horizontal line segments in the grown region
-        const { maxHorizontal, maxVertical } = findLongestLines(region.pixels);
+        const { maxHorizontal, maxVertical } = findLongestLines(
+          region.pixels.filter(
+            ({ y }) => cropY + y + 2 >= wristY - spaceAboveWristToLook - 5
+          )
+        );
 
         // Check if the lengths are sufficiently large and close to each other
-        const minSize = Math.min(50, actualCropWidth / 4, actualCropHeight / 4); // Minimum pixel size for a basketball
+        const minSize = Math.min(
+          100,
+          actualCropWidth / 4,
+          actualCropHeight / 4
+        ); // Minimum pixel size for a basketball
         const aspectRatioTolerance = 0.2; // 20% tolerance for aspect ratio (0.8 to 1.2)
 
         const aspectRatio = maxVertical / maxHorizontal;
         const isSufficientlyLarge =
-          maxHorizontal >= minSize && maxVertical >= minSize;
+          maxHorizontal >= minSize; /*&& maxVertical >= minSize*/
         const isSufficientlyCircular =
           true ||
           (aspectRatio >= 1 - aspectRatioTolerance &&
             aspectRatio <= 1 + aspectRatioTolerance);
 
-        console.log(cropY + region.bounds.maxY, wristY, cropY, region.bounds);
+        /*console.log(
+          'MH',
+          maxHorizontal,
+          maxVertical,
+          cropY + region.bounds.maxY,
+          wristY,
+          cropY,
+          region.bounds
+        );*/
         const isSufficientlyCloseToWrist =
           cropY + region.bounds.maxY + 2 >= wristY - spaceAboveWristToLook;
 
-        console.log(
+        /*console.log(
           maxHorizontal,
           maxVertical,
           actualCropWidth,
@@ -1200,7 +1216,7 @@
           isSufficientlyLarge,
           isSufficientlyCircular,
           isSufficientlyCloseToWrist
-        );
+        );*/
 
         // Log the status for debugging
         if (
@@ -1210,7 +1226,7 @@
         ) {
           //geometricCheckStatus.textContent = '✔ Confirmed';
           //geometricCheckStatus.style.color = 'lime';
-          console.log('CONDITION MET');
+          // console.log('CONDITION MET');
           return true;
         } else {
           //geometricCheckStatus.textContent = '❌ Failed';
@@ -1344,16 +1360,18 @@
               );*/
 
               if (
-                geometricBasketballCheck(videoCanvas, lastWristPosition) ||
-                (basketballCategory &&
+                (geometricBasketballCheck(videoCanvas, lastWristPosition) &&
+                  basketballCategory &&
                   categories
                     .slice()
                     .sort((x, y) => y.score - x.score)
                     .slice(0, 20)
-                    .find((cat) => cat.categoryName === 'basketball') &&
-                  basketballCategory.score > basketballConfidenceThreshold)
+                    .find((cat) => cat.categoryName === 'basketball')) ||
+                basketballCategory.score > basketballConfidenceThreshold
               ) {
                 basketballDetectedThisFrame = true;
+                togglePause();
+                setTimeout(togglePause, 200); // Throttle video
                 console.log('basketball detected');
               }
             }
@@ -1379,14 +1397,14 @@
               if (!ballReleaseDetected) {
                 ballReleaseDetected = true;
                 isBallHeld = false;
-                //if (currentReleaseAngle) {
-                togglePause();
-                console.log(
-                  `Ball released at ${videoPlayer.currentTime.toFixed(
-                    2
-                  )}s! Pausing video.`
-                );
-                //}
+                if (0 < currentReleaseAngle && currentReleaseAngle < 90) {
+                  togglePause();
+                  console.log(
+                    `Ball released at ${videoPlayer.currentTime.toFixed(
+                      2
+                    )}s! Pausing video.`
+                  );
+                }
                 // Log angles automatically on release
                 /*if (
                   currentElbowAngle !== null &&
