@@ -1030,7 +1030,23 @@
        * @param {Array<Object>} pixels An array of pixel objects with x, y properties.
        * @returns {Object} An object with lengths of the longest vertical and horizontal lines.
        */
-      function findLongestLines(pixels) {
+      function findLongestLines(pixels, regionBounds) {
+        /*
+        const { minX, minY, maxX, maxY } = regionBounds;
+        let maxHorizontal = 0;
+        let maxVertical = 0;
+
+        for(let x = minX; x <= maxX; x++) {
+          for(let y = minY; y <= maxY; y++) {
+            if ()
+          }
+        }
+
+
+        const pixelSet = new Set(pixels.map((p) => `${p.x},${p.y}`));
+
+        const visited = new Set();
+        */
         const pixelSet = new Set(pixels.map((p) => `${p.x},${p.y}`));
         let maxHorizontal = 0;
         let maxVertical = 0;
@@ -1118,10 +1134,17 @@
         const wristX = wristPoint.x * videoWidth;
         const wristY = wristPoint.y * videoHeight;
         const spaceAboveWristToLook = 5;
+        const horizontalLinesToCheck = Math.max(Math.min(15, cropSize / 5), 2);
         const cropX = Math.max(0, wristX - cropSize / 2);
-        const cropY = Math.max(0, wristY - cropSize - spaceAboveWristToLook);
+        const cropY = Math.max(
+          0,
+          wristY - horizontalLinesToCheck - spaceAboveWristToLook
+        );
         const actualCropWidth = Math.min(cropSize, videoWidth - cropX);
-        const actualCropHeight = Math.min(cropSize, videoHeight - cropY);
+        const actualCropHeight = Math.min(
+          cropSize,
+          /*videoHeight - cropY*/ horizontalLinesToCheck
+        );
 
         if (actualCropWidth <= 0 || actualCropHeight <= 0) {
           //geometricCheckStatus.textContent = 'N/A';
@@ -1130,16 +1153,16 @@
 
         const imageData = ctx.getImageData(
           cropX,
-          cropY,
+          cropY + actualCropHeight,
           actualCropWidth,
           actualCropHeight
         );
 
         // Find a seed point for region growing (center of the crop)
-        const orangeSeedPoint = findSeedPixel(imageData, [255, 165, 0], 30); // Tolerance of 50
-        const seedX = orangeSeedPoint?.x || Math.floor(actualCropWidth / 2);
+        // const orangeSeedPoint = findSeedPixel(imageData, [255, 165, 0], 30); // Tolerance of 50
+        /*const seedX = orangeSeedPoint?.x || Math.floor(actualCropWidth / 2);
         const seedY =
-          orangeSeedPoint?.y || Math.floor((3 / 4) * actualCropHeight);
+          orangeSeedPoint?.y || Math.floor((3 / 4) * actualCropHeight);*/
 
         // Perform region growing
         // The tolerance and expand factor can be tuned for better results
@@ -1174,10 +1197,16 @@
         }
 
         // Find the longest vertical and horizontal line segments in the grown region
+        /*
         const { maxHorizontal, maxVertical } = findLongestLines(
           region.pixels.filter(
             ({ y }) => cropY + y + 2 >= wristY - spaceAboveWristToLook - 5
           )
+        );
+        */
+        const { maxHorizontal, maxVertical } = findLongestLines(
+          region.pixels,
+          region.bounds
         );
 
         // Check if the lengths are sufficiently large and close to each other
@@ -1205,7 +1234,9 @@
           cropY,
           region.bounds
         );*/
+        
         const isSufficientlyCloseToWrist =
+          true ||
           cropY + region.bounds.maxY + 2 >= wristY - spaceAboveWristToLook;
 
         /*console.log(
@@ -1217,7 +1248,7 @@
           isSufficientlyCircular,
           isSufficientlyCloseToWrist
         );*/
-
+        
         // Log the status for debugging
         if (
           isSufficientlyLarge &&
