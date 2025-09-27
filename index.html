@@ -481,9 +481,9 @@
             listItem.className =
               'flex justify-between items-center text-gray-300 bg-gray-600 p-2 rounded-md';
             listItem.innerHTML = `
-                        <span>Release Angle: <span class="font-bold text-yellow-300">${entry.releaseAngle}°</span></span>
-                        <span>Time: <span class="font-bold text-yellow-300">${entry.timestamp}s</span></span>
-                    `;
+                              <span>Release Angle: <span class="font-bold text-yellow-300">${entry.releaseAngle}°</span></span>
+                              <span>Time: <span class="font-bold text-yellow-300">${entry.timestamp}s</span></span>
+                          `;
             anglesLogList.appendChild(listItem);
           });
         }
@@ -713,20 +713,20 @@
               // If basketball is currently "held", draw an ORANGE circle around the wrist
               if (isBallHeld) {
                 /*console.log(
-                  'ISBALL',
-                  rightWrist.x *
-                    (videoPlayer.videoWidth ** 2 /
-                      videoCanvas.getBoundingClientRect().width),
-                  rightWrist.y *
-                    (videoPlayer.videoHeight ** 2 /
-                      videoCanvas.getBoundingClientRect().height),
-                  videoCanvas.width,
-                  videoCanvas.getBoundingClientRect().width,
-                  videoPlayer.videoWidth,
-                  rightWrist.x *
-                    (videoCanvas.getBoundingClientRect().width /
-                      videoPlayer.videoWidth)
-                );*/
+                        'ISBALL',
+                        rightWrist.x *
+                          (videoPlayer.videoWidth ** 2 /
+                            videoCanvas.getBoundingClientRect().width),
+                        rightWrist.y *
+                          (videoPlayer.videoHeight ** 2 /
+                            videoCanvas.getBoundingClientRect().height),
+                        videoCanvas.width,
+                        videoCanvas.getBoundingClientRect().width,
+                        videoPlayer.videoWidth,
+                        rightWrist.x *
+                          (videoCanvas.getBoundingClientRect().width /
+                            videoPlayer.videoWidth)
+                      );*/
 
                 ctx.beginPath();
                 ctx.arc(
@@ -802,33 +802,33 @@
                 lastWristPosition = null; // Clear if wrist is not detected
               }
               /*
-              if (true /* condition to be added later ) {
-                // Calculate the angle between upper arm (shoulder-elbow) and forearm (elbow-wrist)
-                const releaseAngle = calculateAngle(
-                  shoulderYWristX,
-                  rightShoulder,
-                  rightElbow
-                );
-                const currentReleaseAngle = releaseAngle.toFixed(2); // Update current angle state with 2 decimal places
-                // currentAngleDisplay.textContent = `${currentAngle}°`;
+                    if (true /* condition to be added later ) {
+                      // Calculate the angle between upper arm (shoulder-elbow) and forearm (elbow-wrist)
+                      const releaseAngle = calculateAngle(
+                        shoulderYWristX,
+                        rightShoulder,
+                        rightElbow
+                      );
+                      const currentReleaseAngle = releaseAngle.toFixed(2); // Update current angle state with 2 decimal places
+                      // currentAngleDisplay.textContent = `${currentAngle}°`;
 
-                // Draw the angle text on the canvas near the elbow
-                ctx.font = `${Math.max(
-                  Math.floor(
-                    (30 * videoPlayer.videoWidth) /
-                      videoCanvas.getBoundingClientRect().width
-                  ),
-                  30
-                )}px Arial`;
+                      // Draw the angle text on the canvas near the elbow
+                      ctx.font = `${Math.max(
+                        Math.floor(
+                          (30 * videoPlayer.videoWidth) /
+                            videoCanvas.getBoundingClientRect().width
+                        ),
+                        30
+                      )}px Arial`;
 
-                ctx.fillStyle = 'yellow';
-                // Position text relative to canvas size and elbow coordinates
-                ctx.fillText(
-                  `Release Angle: ${currentReleaseAngle}°`,
-                  rightElbow.x * videoCanvas.width + 10,
-                  rightElbow.y * videoCanvas.height + 70
-                );
-              }*/
+                      ctx.fillStyle = 'yellow';
+                      // Position text relative to canvas size and elbow coordinates
+                      ctx.fillText(
+                        `Release Angle: ${currentReleaseAngle}°`,
+                        rightElbow.x * videoCanvas.width + 10,
+                        rightElbow.y * videoCanvas.height + 70
+                      );
+                    }*/
             } else {
               currentAngle = null; // No valid arm detected or confidence too low
               currentAngleDisplay.textContent = 'N/A';
@@ -888,25 +888,25 @@
           const currentColor = getPixelColor(data, x, y, width);
           //if (colorDistance(seedColor, currentColor) <= tolerance) {
           /*          const basketballColors = [
-            [255, 165, 0], // Classic orange
-            [205, 133, 63], // Burnt Sienna / Darker orange
-            [255, 106, 0], // Vibrant orange
-            [184, 115, 51], // A more brownish/tan shade
-            [150, 100, 50], // Even darker brown-orange
-          ]
-            .map((color) =>
-              Array.from(new Array(color[0]).keys()).map((red) => [
-                color[0] - red,
-                (color[1] * (color[0] - red)) / color[0],
-                (color[2] * (color[0] - red)) / color[0],
-              ])
-            )
-            .flat();*/
+                  [255, 165, 0], // Classic orange
+                  [205, 133, 63], // Burnt Sienna / Darker orange
+                  [255, 106, 0], // Vibrant orange
+                  [184, 115, 51], // A more brownish/tan shade
+                  [150, 100, 50], // Even darker brown-orange
+                ]
+                  .map((color) =>
+                    Array.from(new Array(color[0]).keys()).map((red) => [
+                      color[0] - red,
+                      (color[1] * (color[0] - red)) / color[0],
+                      (color[2] * (color[0] - red)) / color[0],
+                    ])
+                  )
+                  .flat();*/
           //console.log(basketballColors);
           /*   basketballColors.map((bballColor) =>
-              colorDistance(bballColor, currentColor)
-            )
-          );*/
+                    colorDistance(bballColor, currentColor)
+                  )
+                );*/
 
           if (
             basketballColors.some(
@@ -995,34 +995,34 @@
           bounds,
         };
         /*
-         if (
-              basketballColors.some(
-                (bballColor) => colorDistance(bballColor, currentColor) <= 30
-              )
-            ) {
-              // if (currentColor[0] - 5 > currentColor[1] && currentColor[2] < 127) {
-              // use for orangish
-              visited[i] = 1;
-              regionPixels.push({ x, y });
+               if (
+                    basketballColors.some(
+                      (bballColor) => colorDistance(bballColor, currentColor) <= 30
+                    )
+                  ) {
+                    // if (currentColor[0] - 5 > currentColor[1] && currentColor[2] < 127) {
+                    // use for orangish
+                    visited[i] = 1;
+                    regionPixels.push({ x, y });
 
-              // Update bounds
-              bounds.minX = Math.min(bounds.minX, x);
-              bounds.minY = Math.min(bounds.minY, y);
-              bounds.maxX = Math.max(bounds.maxX, x);
-              bounds.maxY = Math.max(bounds.maxY, y);
+                    // Update bounds
+                    bounds.minX = Math.min(bounds.minX, x);
+                    bounds.minY = Math.min(bounds.minY, y);
+                    bounds.maxX = Math.max(bounds.maxX, x);
+                    bounds.maxY = Math.max(bounds.maxY, y);
 
-              // Add neighbors to stack
-              for (let i = 1; i < 8; i++) {
-                stack.push({ x: x + i, y });
-                stack.push({ x: x - i, y });
-                stack.push({ x, y: y + i });
-                stack.push({ x, y: y - i });
+                    // Add neighbors to stack
+                    for (let i = 1; i < 8; i++) {
+                      stack.push({ x: x + i, y });
+                      stack.push({ x: x - i, y });
+                      stack.push({ x, y: y + i });
+                      stack.push({ x, y: y - i });
+                    }
+                  }
+                }
+                return { pixels: regionPixels, bounds };
               }
-            }
-          }
-          return { pixels: regionPixels, bounds };
-        }
-        */
+              */
       }
 
       /**
@@ -1032,21 +1032,21 @@
        */
       function findLongestLines(pixels, regionBounds) {
         /*
-        const { minX, minY, maxX, maxY } = regionBounds;
-        let maxHorizontal = 0;
-        let maxVertical = 0;
+              const { minX, minY, maxX, maxY } = regionBounds;
+              let maxHorizontal = 0;
+              let maxVertical = 0;
 
-        for(let x = minX; x <= maxX; x++) {
-          for(let y = minY; y <= maxY; y++) {
-            if ()
-          }
-        }
+              for(let x = minX; x <= maxX; x++) {
+                for(let y = minY; y <= maxY; y++) {
+                  if ()
+                }
+              }
 
 
-        const pixelSet = new Set(pixels.map((p) => `${p.x},${p.y}`));
+              const pixelSet = new Set(pixels.map((p) => `${p.x},${p.y}`));
 
-        const visited = new Set();
-        */
+              const visited = new Set();
+              */
         const pixelSet = new Set(pixels.map((p) => `${p.x},${p.y}`));
         let maxHorizontal = 0;
         let maxVertical = 0;
@@ -1161,8 +1161,8 @@
         // Find a seed point for region growing (center of the crop)
         // const orangeSeedPoint = findSeedPixel(imageData, [255, 165, 0], 30); // Tolerance of 50
         /*const seedX = orangeSeedPoint?.x || Math.floor(actualCropWidth / 2);
-        const seedY =
-          orangeSeedPoint?.y || Math.floor((3 / 4) * actualCropHeight);*/
+              const seedY =
+                orangeSeedPoint?.y || Math.floor((3 / 4) * actualCropHeight);*/
 
         // Perform region growing
         // The tolerance and expand factor can be tuned for better results
@@ -1175,7 +1175,7 @@
         const outlineWidth = region.bounds.maxX - region.bounds.minX;
         const outlineHeight = region.bounds.maxY - region.bounds.minY;
         ctx.strokeStyle = 'teal'; // Green outline
-        ctx.lineWidth = 5;
+        ctx.lineWidth = 2;
         // Add the crop offsets to the region bounds for correct positioning on the main canvas
         ctx.strokeRect(
           cropX + region.bounds.minX,
@@ -1186,24 +1186,28 @@
         ctx.fillStyle = 'purple';
         //console.log(canvas, region.pixels);
         /*region.pixels.forEach((px) =>
-          ctx.fillRect(cropX + px.x, cropY + px.y, 1, 1)
-        );*/
+                ctx.fillRect(cropX + px.x, cropY + px.y, 1, 1)
+              );*/
         ctx.fillStyle = 'blue'; //red
         //debugger;
         // If the region is too small, it's probably not a basketball
-        if (region.pixels.length < 100) {
+        if (
+          region.pixels.length <
+          (1 / 5) * actualCropWidth * actualCropHeight
+        ) {
+          console.log((1 / 5) * actualCropWidth * actualCropHeight);
           //geometricCheckStatus.textContent = 'Too small';
           return false;
         }
 
         // Find the longest vertical and horizontal line segments in the grown region
         /*
-        const { maxHorizontal, maxVertical } = findLongestLines(
-          region.pixels.filter(
-            ({ y }) => cropY + y + 2 >= wristY - spaceAboveWristToLook - 5
-          )
-        );
-        */
+              const { maxHorizontal, maxVertical } = findLongestLines(
+                region.pixels.filter(
+                  ({ y }) => cropY + y + 2 >= wristY - spaceAboveWristToLook - 5
+                )
+              );
+              */
         const { maxHorizontal, maxVertical } = findLongestLines(
           region.pixels,
           region.bounds
@@ -1224,31 +1228,31 @@
           true ||
           (aspectRatio >= 1 - aspectRatioTolerance &&
             aspectRatio <= 1 + aspectRatioTolerance);
-
-        /*console.log(
-          'MH',
-          maxHorizontal,
-          maxVertical,
-          cropY + region.bounds.maxY,
-          wristY,
-          cropY,
-          region.bounds
-        );*/
-        
+        /*
+              console.log(
+                'MH',
+                maxHorizontal,
+                maxVertical,
+                cropY + region.bounds.maxY,
+                wristY,
+                cropY,
+                region.bounds
+              );
+              */
         const isSufficientlyCloseToWrist =
           true ||
           cropY + region.bounds.maxY + 2 >= wristY - spaceAboveWristToLook;
-
-        /*console.log(
-          maxHorizontal,
-          maxVertical,
-          actualCropWidth,
-          actualCropHeight,
-          isSufficientlyLarge,
-          isSufficientlyCircular,
-          isSufficientlyCloseToWrist
-        );*/
-        
+        /*
+              console.log(
+                maxHorizontal,
+                maxVertical,
+                actualCropWidth,
+                actualCropHeight,
+                isSufficientlyLarge,
+                isSufficientlyCircular,
+                isSufficientlyCloseToWrist
+              );
+      */
         // Log the status for debugging
         if (
           isSufficientlyLarge &&
@@ -1295,33 +1299,33 @@
           );
 
           /*
-          const predictions = await detector.detect(videoPlayer);
-          // Find the most confident 'sports ball' (which includes basketballs)
-          const basketballPrediction = predictions.find(
-            (p) => p.class === 'sports ball' && p.score > 0
-          );
-          // console.log('PREDICTIONS', predictions);
-          if (basketballPrediction) {
-            console.log('BASKETBALL', basketballPrediction);
-            togglePause();
-            // Draw bounding box of basketball for visualization
-            ctx.strokeStyle = 'lime';
-            ctx.lineWidth = 4;
-            // Scale bbox coordinates to main canvas dimensions
-            const [bballX, bballY, bballWidth, bballHeight] =
-              basketballPrediction.bbox;
-            const scaledX =
-              bballX * (videoCanvas.width / videoPlayer.videoWidth);
-            const scaledY =
-              bballY * (videoCanvas.height / videoPlayer.videoHeight);
-            const scaledWidth =
-              bballWidth * (videoCanvas.width / videoPlayer.videoWidth);
-            const scaledHeight =
-              bballHeight * (videoCanvas.height / videoPlayer.videoHeight);
-            console.log(scaledX, scaledY, scaledWidth, scaledHeight);
-            ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
-          }
-          */
+                const predictions = await detector.detect(videoPlayer);
+                // Find the most confident 'sports ball' (which includes basketballs)
+                const basketballPrediction = predictions.find(
+                  (p) => p.class === 'sports ball' && p.score > 0
+                );
+                // console.log('PREDICTIONS', predictions);
+                if (basketballPrediction) {
+                  console.log('BASKETBALL', basketballPrediction);
+                  togglePause();
+                  // Draw bounding box of basketball for visualization
+                  ctx.strokeStyle = 'lime';
+                  ctx.lineWidth = 4;
+                  // Scale bbox coordinates to main canvas dimensions
+                  const [bballX, bballY, bballWidth, bballHeight] =
+                    basketballPrediction.bbox;
+                  const scaledX =
+                    bballX * (videoCanvas.width / videoPlayer.videoWidth);
+                  const scaledY =
+                    bballY * (videoCanvas.height / videoPlayer.videoHeight);
+                  const scaledWidth =
+                    bballWidth * (videoCanvas.width / videoPlayer.videoWidth);
+                  const scaledHeight =
+                    bballHeight * (videoCanvas.height / videoPlayer.videoHeight);
+                  console.log(scaledX, scaledY, scaledWidth, scaledHeight);
+                  ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+                }
+                */
 
           await pose.send({ image: videoPlayer });
         } catch (error) {
@@ -1380,15 +1384,18 @@
               const basketballCategory = categories.find(
                 (cat) => cat.categoryName === 'basketball'
               );
+              const croquetCategory = categories.find(
+                (cat) => cat.categoryName === 'croquet ball'
+              );
               /*console.log(
-                basketballCategory,
-                categories.slice().sort((x, y) => y.score - x.score),
-                categories
-                  .slice()
-                  .sort((x, y) => y.score - x.score)
-                  .slice(0, 20)
-                  .map((cat) => cat.categoryName)
-              );*/
+                      basketballCategory,
+                      categories.slice().sort((x, y) => y.score - x.score),
+                      categories
+                        .slice()
+                        .sort((x, y) => y.score - x.score)
+                        .slice(0, 20)
+                        .map((cat) => cat.categoryName)
+                    );*/
 
               if (
                 (geometricBasketballCheck(videoCanvas, lastWristPosition) &&
@@ -1396,14 +1403,35 @@
                   categories
                     .slice()
                     .sort((x, y) => y.score - x.score)
-                    .slice(0, 20)
-                    .find((cat) => cat.categoryName === 'basketball')) ||
-                basketballCategory.score > basketballConfidenceThreshold
+                    .slice(0, Math.round(categories.length / 200)) //Math.round((2 * categories.length) / 5))
+                    .find(
+                      (cat) =>
+                        cat.categoryName === 'basketball' ||
+                        cat.categoryName === 'croquet ball' ||
+                        cat.categoryName === 'nipple'
+                    )) ||
+                basketballCategory.score > basketballConfidenceThreshold ||
+                croquetCategory.score > basketballConfidenceThreshold
               ) {
                 basketballDetectedThisFrame = true;
-                togglePause();
-                setTimeout(togglePause, 200); // Throttle video
-                console.log('basketball detected');
+                //togglePause();
+                //setTimeout(togglePause, 200); // Throttle video
+                console.log(
+                  'basketball detected'/*,
+                  categories,
+                  basketballCategory.score*/
+                );
+              } else {
+                /*console.log(
+                  'fail',
+                  categories,
+                  categories
+                    .slice()
+                    .sort((x, y) => y.score - x.score)
+                    .slice(0, Math.round(categories.length / 200)),
+                  basketballCategory.score,
+                  croquetCategory.score
+                );*/
               }
             }
           }
@@ -1421,7 +1449,7 @@
           isBallHeld = true;
           framesWithoutBasketball = 0; // Reset counter if basketball is detected
         } else {
-          if (isBallHeld) {
+          if (isBallHeld && currentAngle > 120) {
             framesWithoutBasketball++;
             if (framesWithoutBasketball >= releaseDetectionFrames) {
               // Basketball was held, and now consistently not detected for several frames
@@ -1438,16 +1466,16 @@
                 }
                 // Log angles automatically on release
                 /*if (
-                  currentElbowAngle !== null &&
-                  currentReleaseAngle !== null
-                ) {
-                  anglesLog.push({
-                    elbowAngle: currentElbowAngle,
-                    releaseAngle: currentReleaseAngle,
-                    timestamp: videoPlayer.currentTime.toFixed(2),
-                  });
-                  updateAnglesLogDisplay();
-                }*/
+                        currentElbowAngle !== null &&
+                        currentReleaseAngle !== null
+                      ) {
+                        anglesLog.push({
+                          elbowAngle: currentElbowAngle,
+                          releaseAngle: currentReleaseAngle,
+                          timestamp: videoPlayer.currentTime.toFixed(2),
+                        });
+                        updateAnglesLogDisplay();
+                      }*/
               }
             }
           } else {
@@ -1510,20 +1538,20 @@
       }
 
       /*
-      async function initializeObjectDetection() {
-        const vision = await FilesetResolver.forVisionTasks(
-          // path/to/wasm/root
-          'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
-        );
-        objectDetector = await ObjectDetector.createFromOptions(vision, {
-          baseOptions: {
-            modelAssetPath: `https://storage.googleapis.com/mediapipe-tasks/object_detector/efficientdet_lite0_uint8.tflite`,
-          },
-          scoreThreshold: 0.5,
-          runningMode: 'video',
-        });
-      }
-      */
+            async function initializeObjectDetection() {
+              const vision = await FilesetResolver.forVisionTasks(
+                // path/to/wasm/root
+                'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/wasm'
+              );
+              objectDetector = await ObjectDetector.createFromOptions(vision, {
+                baseOptions: {
+                  modelAssetPath: `https://storage.googleapis.com/mediapipe-tasks/object_detector/efficientdet_lite0_uint8.tflite`,
+                },
+                scoreThreshold: 0.5,
+                runningMode: 'video',
+              });
+            }
+            */
 
       function togglePause() {
         if (videoPlayer.paused) {
@@ -1623,8 +1651,8 @@
       playPauseBtn.addEventListener('click', togglePause);
       window.addEventListener('keypress', togglePause);
       /*window.addEventListener('keypress', (e) =>
-        videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause()
-      );*/
+              videoPlayer.paused ? videoPlayer.play() : videoPlayer.pause()
+            );*/
 
       // When video ends
       videoPlayer.addEventListener('ended', () => {
@@ -1688,16 +1716,16 @@
         messageBox.className =
           'fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50';
         messageBox.innerHTML = `
-                <div class="bg-gray-800 p-6 rounded-lg shadow-xl text-center max-w-sm">
-                    <h3 class="text-xl font-bold text-blue-400 mb-4">Feature Information</h3>
-                    <p class="text-gray-300 mb-6">
-                        Downloading the annotated video is not directly supported client-side due to browser limitations for video re-encoding. This feature would typically require server-side processing or a complex client-side video encoding library (like ffmpeg.wasm). The annotations are shown live on the video.
-                    </p>
-                    <button id="close-message-box" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
-                        Got It!
-                    </button>
-                </div>
-            `;
+                      <div class="bg-gray-800 p-6 rounded-lg shadow-xl text-center max-w-sm">
+                          <h3 class="text-xl font-bold text-blue-400 mb-4">Feature Information</h3>
+                          <p class="text-gray-300 mb-6">
+                              Downloading the annotated video is not directly supported client-side due to browser limitations for video re-encoding. This feature would typically require server-side processing or a complex client-side video encoding library (like ffmpeg.wasm). The annotations are shown live on the video.
+                          </p>
+                          <button id="close-message-box" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-full">
+                              Got It!
+                          </button>
+                      </div>
+                  `;
         document.body.appendChild(messageBox);
 
         document
