@@ -758,7 +758,7 @@
 
                 // Position text relative to canvas size and elbow coordinates
                 ctx.fillText(
-                  'Ball Released',
+                  currentAngle > 120 ? 'Ball Released' : 'Ball Held',
                   rightWrist.x * videoCanvas.width + 25,
                   rightWrist.y * videoCanvas.height + 10
                 );
@@ -1193,9 +1193,9 @@
         // If the region is too small, it's probably not a basketball
         if (
           region.pixels.length <
-          (1 / 5) * actualCropWidth * actualCropHeight
+          Math.min((1 / 5) * actualCropWidth * actualCropHeight, 100)
         ) {
-          console.log((1 / 5) * actualCropWidth * actualCropHeight);
+          //console.log((1 / 5) * actualCropWidth * actualCropHeight);
           //geometricCheckStatus.textContent = 'Too small';
           return false;
         }
@@ -1355,6 +1355,8 @@
           );
 
           if (actualCropWidth > 0 && actualCropHeight > 0) {
+            document.getElementById('temp') &&
+              document.body.removeChild(document.getElementById('temp'));
             videoCanvas
               .getContext('2d')
               .strokeRect(cropX, cropY, actualCropWidth, actualCropHeight);
@@ -1375,6 +1377,9 @@
               actualCropWidth,
               actualCropHeight // Destination rectangle
             );
+
+            tempCanvas.id = 'temp';
+            document.body.appendChild(tempCanvas);
 
             // Perform classification on the cropped image
             const classifications = classifier.classify(tempCanvas);
@@ -1414,10 +1419,10 @@
                 croquetCategory.score > basketballConfidenceThreshold
               ) {
                 basketballDetectedThisFrame = true;
-                //togglePause();
-                //setTimeout(togglePause, 200); // Throttle video
+                togglePause();
+                setTimeout(togglePause, 50); // Throttle video
                 console.log(
-                  'basketball detected'/*,
+                  'basketball detected' /*,
                   categories,
                   basketballCategory.score*/
                 );
@@ -1445,7 +1450,7 @@
           framesWithoutBasketball = 0;
         }
 
-        if (basketballDetectedThisFrame) {
+        if (basketballDetectedThisFrame && currentAngle < 170) {
           isBallHeld = true;
           framesWithoutBasketball = 0; // Reset counter if basketball is detected
         } else {
